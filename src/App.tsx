@@ -402,11 +402,12 @@ export default function App() {
   const [allMonths, setAllMonths] = useState(false)
   const [ledgerDate, setLedgerDate] = useState('')
   const [ledgerCategory, setLedgerCategory] = useState('')
+  const [ledgerFiltersOpen, setLedgerFiltersOpen] = useState(false)
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
   const [copyTemplate, setCopyTemplate] = useState<Entry | null>(null)
-  const [ledgerView, setLedgerView] = useState<'list'|'calendar'>(() => localStorage.getItem('savemoney-default-ledger-view') === 'list' ? 'list' : 'calendar')
+  const [ledgerView, setLedgerView] = useState<'list'|'calendar'>('calendar')
   const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [toast, setToast] = useState('')
   const [initError, setInitError] = useState(false)
@@ -460,7 +461,7 @@ export default function App() {
   const notifyChange = (message: string) => { closeEditor(); setToast(message) }
   const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(ledgerDate || null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
-  const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next);if(next === 'settings')setSettingsPage('root');if(next === 'list')setLedgerView(defaultLedgerView);window.scrollTo(0,0)}
+  const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next);if(next === 'settings')setSettingsPage('root');if(next === 'list'){setLedgerView('calendar');setLedgerFiltersOpen(false)};window.scrollTo(0,0)}
   const openSettingsPage = (page: typeof settingsPage) => {setSettingsPage(page);window.scrollTo(0,0)}
 
   async function saveCategoryBudgetForm(event: React.FormEvent) {
@@ -581,12 +582,8 @@ export default function App() {
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </>}
       {!budgetOpen && tab === 'list' && <>
-        <div className="section-heading"><h2>账单明细</h2><span className="meta">{filteredEntries.length} 笔</span></div>
-        <div className="ledger-view-switch" role="group" aria-label="账单查看方式">
-          <button type="button" className={ledgerView==='calendar'?'selected':''} aria-pressed={ledgerView==='calendar'} onClick={showCalendar}><CalendarDays size={16}/> 日历</button>
-          <button type="button" className={ledgerView==='list'?'selected':''} aria-pressed={ledgerView==='list'} onClick={()=>setLedgerView('list')}><List size={16}/> 列表</button>
-        </div>
-        {drilldownIds && <div className="filter-notice"><span>正在查看选中的消费分类</span><button onClick={()=>setDrilldownIds(null)}>清除分类筛选</button></div>}
+        <div className="ledger-v3-heading"><h2>账单明细</h2><div className="ledger-v3-actions"><button type="button" className={ledgerFiltersOpen?'is-active':''} aria-label="筛选账单" aria-expanded={ledgerFiltersOpen} onClick={()=>setLedgerFiltersOpen(v=>!v)}>筛选{ledgerHasFilters?' · 已启用':''}</button><button type="button" aria-label={ledgerView==='calendar'?'切换列表视图':'切换日历视图'} onClick={()=>{if(ledgerView==='calendar'){setLedgerView('list')}else{showCalendar();setLedgerFiltersOpen(false)}}}>{ledgerView==='calendar'?<List size={19}/>:<CalendarDays size={19}/>}</button></div></div>
+        {ledgerFiltersOpen && <div className="ledger-v3-panel">
         <div className="ledger-tools">
           <input aria-label="搜索账单" placeholder="搜索备注或分类…" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
           <div className="ledger-filters">
@@ -601,11 +598,12 @@ export default function App() {
             <label><span>按分类筛选</span><select aria-label="筛选账单分类" value={ledgerCategory} onChange={e=>setLedgerCategory(e.target.value)}><option value="">全部分类</option>{categoryList.filter(c=>filterType==='all'||c.type===filterType).map(c=><option key={c.id} value={c.id}>{c.type==='income'?'收入 · ':'支出 · '}{c.name}</option>)}</select></label>
           </div>
         </div>
-        <div className="ledger-result-summary" role="status" aria-live="polite">
-          <div><span>{ledgerHasFilters ? '筛选结果' : '账单汇总'} · {filteredEntries.length} 笔</span><strong>支出 ¥{money(ledgerExpense)} <em>收入 ¥{money(ledgerIncome)}</em></strong></div>
-          {ledgerHasFilters && <button type="button" onClick={clearLedgerFilters}>清除筛选</button>}
-        </div>
+
+          {ledgerHasFilters && <button className="ledger-v3-reset" type="button" onClick={clearLedgerFilters}>清除全部筛选</button>}
+        </div>}
+        {ledgerHasFilters && !ledgerFiltersOpen && <div className="ledger-v3-filter-hint"><span>当前已启用筛选 · {filteredEntries.length} 笔</span><button type="button" onClick={clearLedgerFilters}>清除</button></div>}
         {ledgerView==='calendar' ? <><ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={date=>{setCalendarDate(date);setLedgerDate('')}} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor}/>{filteredEntries.length===0 && <p className="calendar-filter-empty" role="status">当前条件下没有账单，可更换月份或清除筛选。</p>}</> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><div className="day-date"><strong>{day.date}</strong><small>{day.entries.length} 笔</small></div><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
+
       </>}
       {!budgetOpen && tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
