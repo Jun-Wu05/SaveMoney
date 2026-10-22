@@ -8,6 +8,7 @@ import { budgetProgress, removeMonthlyBudget, setMonthlyBudget } from './budget'
 import { SpendingDonut } from './SpendingDonut'
 import { monthlyExpenseTrend, spendingInsights } from './insights'
 import { SpendingTrend } from './SpendingTrend'
+import { groupEntriesByDay } from './dailyGroups'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -253,7 +254,7 @@ export default function App() {
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => setTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} />) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </>}
-      {tab === 'list' && <><div className="section-heading"><h2>本月账单</h2><span className="meta">{monthEntries.length} 笔</span></div>{monthEntries.length ? monthEntries.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>) : <div className="empty"><List size={30}/><strong>这个月还没有记录</strong><span>点击下方按钮开始记账</span></div>}</>}
+      {tab === 'list' && <><div className="section-heading"><h2>本月账单</h2><span className="meta">{monthEntries.length} 笔</span></div>{monthEntries.length ? groupEntriesByDay(monthEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><strong>{day.date}</strong><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>这个月还没有记录</strong><span>点击下方按钮开始记账</span></div>}</>}
       {tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
