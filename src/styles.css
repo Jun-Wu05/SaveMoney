@@ -239,3 +239,40 @@
 .editor .delete-button{padding-bottom:10px}
 .editor .inline-category-form{padding-top:18px}
 @media(max-height:650px){.editor{height:96%}}
+
+
+/* SaveMoney 2.0 — phase 1: visual foundation and home hierarchy.
+   Keep modal scrolling, touch gestures and editor layout untouched. */
+:root{
+  --sm-bg:#f7f7f2;
+  --sm-surface:#fff;
+  --sm-ink:#202522;
+  --sm-muted:#788679;
+  --sm-brand:#527d66;
+  --sm-brand-soft:#e7eee7;
+  --sm-line:#e6eae2;
+  --sm-radius-card:20px;
+}
+.app-shell{background:var(--sm-bg)}
+.app-header .brand{letter-spacing:-.8px}
+.hero{
+  background:var(--sm-surface);
+  border:1px solid var(--sm-line);
+  border-radius:var(--sm-radius-card);
+  padding:24px 22px 22px;
+}
+.hero p{color:var(--sm-muted);font-weight:500}
+.hero h1{font-size:clamp(30px,8vw,38px);letter-spacing:-1.2px;margin-bottom:24px;overflow-wrap:anywhere}
+.hero-grid{border-top:1px solid #eef0ea;padding-top:16px;gap:16px}
+.hero-grid strong{font-variant-numeric:tabular-nums}
+.home-section-heading{margin-top:26px}
+.donut-compact{border-radius:var(--sm-radius-card);box-shadow:none}
+.budget-action{border:1px solid #e2eae0;border-radius:18px}
+.entry-row:focus-visible,.budget-action:focus-visible,.section-heading button:focus-visible{
+  outline:2px solid var(--sm-brand);
+  outline-offset:3px;
+}
+@media(max-width:360px){
+  .hero{padding:20px 16px}
+  .hero-grid{gap:10px}
+}
