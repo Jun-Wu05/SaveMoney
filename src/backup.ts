@@ -75,11 +75,11 @@ export function validateBackupText(text: string): BackupData {
     throw new Error('备份中包含无效交易或分类')
   }
   const budgets = data.budgets === undefined ? [] : data.budgets
-  if (!Array.isArray(budgets) || budgets.length > 1200 || !budgets.every((b: unknown) => isObject(b) && typeof b.month === 'string' && /^\\d{4}-(0[1-9]|1[0-2])$/.test(b.month) && typeof b.amountMinor === 'number' && Number.isSafeInteger(b.amountMinor) && b.amountMinor > 0 && b.amountMinor <= 99_999_999_999)) throw new Error('备份中的月度预算无效')
+  if (!Array.isArray(budgets) || budgets.length > 1200 || !budgets.every((b: unknown) => isObject(b) && typeof b.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(b.month) && typeof b.amountMinor === 'number' && Number.isSafeInteger(b.amountMinor) && b.amountMinor > 0 && b.amountMinor <= 99_999_999_999)) throw new Error('备份中的月度预算无效')
   if (new Set((budgets as Budget[]).map(b => b.month)).size !== budgets.length) throw new Error('备份包含重复的预算月份')
   const categoryBudgets = data.categoryBudgets === undefined ? [] : data.categoryBudgets
   if (!Array.isArray(categoryBudgets) || categoryBudgets.length > 60_000 || !categoryBudgets.every((b: unknown) =>
-    isObject(b) && typeof b.month === 'string' && /^\\d{4}-(0[1-9]|1[0-2])$/.test(b.month) &&
+    isObject(b) && typeof b.month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(b.month) &&
     isString(b.categoryId, 100) && b.categoryId.length > 0 &&
     b.id === `${b.month}:${b.categoryId}` &&
     typeof b.amountMinor === 'number' && Number.isSafeInteger(b.amountMinor) && b.amountMinor > 0 && b.amountMinor <= 99_999_999_999
