@@ -61,6 +61,9 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
   const [note, setNote] = useState(entry?.note ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [categoryBusy, setCategoryBusy] = useState(false)
   const available = preferredCategories(entries, categories, type)
   const recentCategoryId = lastEntryOfType(entries, type)?.categoryId
   const selected = available.some(c => c.id === categoryId) ? categoryId : (recentCategoryId && available.some(c => c.id === recentCategoryId) ? recentCategoryId : available[0]?.id ?? '')
@@ -92,10 +95,32 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
     catch { setError('删除失败，请重试'); setBusy(false) }
   }
 
+  async function createInlineCategory(event: React.FormEvent) {
+    event.preventDefault()
+    if (categoryBusy) return
+    setCategoryBusy(true)
+    setError('')
+    try {
+      const id = await addCategory(type, newCategoryName)
+      setCategoryId(id)
+      setNewCategoryName('')
+      setCategoryView('list')
+    } catch (e) { setError(e instanceof Error ? e.message : '添加分类失败') }
+    finally { setCategoryBusy(false) }
+  }
+
   return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="editor" role="dialog" aria-modal="true" aria-label={entry ? '编辑账单' : '记一笔'}>
-      <header className="editor-header"><button className="icon-button" onClick={onClose} aria-label="关闭"><X size={22}/></button><strong>{entry ? '编辑账单' : '记一笔'}</strong><span style={{width:40}}/></header>
-      <form onSubmit={submit}>
+      <header className="editor-header"><button type="button" className="icon-button" onClick={categoryView !== 'list' ? () => { setCategoryView('list'); setError('') } : onClose} aria-label={categoryView !== 'list' ? '返回记账' : '关闭'}>{categoryView !== 'list' ? <ChevronLeft size={22}/> : <X size={22}/>}</button><strong>{categoryView === 'manage' ? '管理分类' : categoryView === 'new' ? '新增分类' : entry ? '编辑账单' : '记一笔'}</strong><span style={{width:40}}/></header>
+      {categoryView === 'new' && <form className="inline-category-form" onSubmit={createInlineCategory}>
+        <p>新增{type === 'expense' ? '支出' : '收入'}分类，完成后将自动选中；已填写的金额、日期和备注都会保留。</p>
+        <label htmlFor="new-category-name">分类名称</label>
+        <input id="new-category-name" maxLength={20} autoFocus placeholder="例如：宠物、旅行" value={newCategoryName} onChange={event => setNewCategoryName(event.target.value)}/>
+        {error && <p className="error" role="alert">{error}</p>}
+        <button className="save-button" disabled={!newCategoryName.trim() || categoryBusy} type="submit">{categoryBusy ? '添加中…' : '添加并选中'}</button>
+      </form>}
+      {categoryView === 'manage' && <CategoryManager categories={categories} initialType={type} />}
+      <form hidden={categoryView !== 'list'} onSubmit={submit}>
         <div className="type-toggle"><button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setCategoryId('')}}>支出</button><button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setCategoryId('')}}>收入</button></div>
         <label className="amount-label" htmlFor="amount">金额（人民币）</label>
         <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} onChange={event => setAmount(event.target.value)} autoFocus /></div>
@@ -107,7 +132,8 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
           setError('')
         }}>复制上一笔金额、分类与备注（请核对后保存）</button>}
         <h3 className="section-label">选择分类</h3>
-        <div className="categories">{available.map(c => {const Icon = icons[c.icon] ?? Ellipsis;return <button type="button" key={c.id} onClick={() => setCategoryId(c.id)} className={selected === c.id ? 'category chosen' : 'category'}><Icon size={20}/><span>{c.name}</span></button>})}</div>
+        <div className="categories">{available.map(c => {const Icon = icons[c.icon] ?? Ellipsis;return <button type="button" key={c.id} onClick={() => setCategoryId(c.id)} className={selected === c.id ? 'category chosen' : 'category'}><Icon size={20}/><span>{c.name}</span></button>})}<button type="button" className="category category-add" onClick={() => {setCategoryView('new');setError('')}}><Plus size={20}/><span>新增分类</span></button></div>
+        <button type="button" className="manage-category-link" onClick={() => {setCategoryView('manage');setError('')}}>管理分类 <ChevronRight size={16}/></button>
         <div className="form-fields"><label>日期<input required type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label>备注（可选）<input maxLength={200} placeholder="写点什么…" value={note} onChange={e => setNote(e.target.value)} /></label></div>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="save-button" type="submit" disabled={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
@@ -117,8 +143,8 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
   </div>
 }
 
-function CategoryManager({ categories }: { categories: Category[] }) {
-  const [type, setType] = useState<TransactionType>('expense')
+function CategoryManager({ categories, initialType = 'expense' }: { categories: Category[]; initialType?: TransactionType }) {
+  const [type, setType] = useState<TransactionType>(initialType)
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
@@ -157,7 +183,7 @@ function CategoryManager({ categories }: { categories: Category[] }) {
         }}>删除</button>
       </>}
     </div>)}</div>
-    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(() => addCategory(type,newName),() => setNewName(''))}}>
+    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName) },() => setNewName(''))}}>
       <input aria-label="新分类名称" maxLength={20} placeholder="添加新分类，如 宠物" value={newName} onChange={e => setNewName(e.target.value)}/>
       <button disabled={busy || !newName.trim()} type="submit">添加</button>
     </form>
@@ -167,6 +193,7 @@ function CategoryManager({ categories }: { categories: Category[] }) {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
+  const [budgetOpen, setBudgetOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [drilldownIds, setDrilldownIds] = useState<string[] | null>(null)
   const [filterType, setFilterType] = useState<TransactionType | 'all'>('all')
@@ -187,6 +214,7 @@ export default function App() {
   const [budgetError, setBudgetError] = useState('')
   const [budgetBusy, setBudgetBusy] = useState(false)
   useEffect(() => { setBudgetInput(''); setBudgetError('') }, [month])
+  useEffect(() => { if (budgetOpen && currentBudget) setBudgetInput((currentBudget.amountMinor / 100).toFixed(2)) }, [budgetOpen, currentBudget?.amountMinor, month])
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const categoryList = useMemo(() => categories ?? [], [categories])
   const monthEntries = useMemo(() => (entries ?? []).filter(entry => entry.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)), [entries, month])
@@ -203,6 +231,8 @@ export default function App() {
   const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>!drilldownIds || drilldownIds.includes(e.categoryId)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds])
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new') => setEditing(entry)
+  const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
+  const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next)}
 
   async function saveBudget(event: React.FormEvent) {
     event.preventDefault()
@@ -265,17 +295,22 @@ export default function App() {
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     <main className="content">
       {<div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
-      {tab === 'home' && <>
+      {!budgetOpen && tab === 'home' && <>
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
-        {currentBudget && <section className="budget-card" aria-label="月度预算">
-          <div className="budget-heading"><span>本月预算</span><strong>¥ {money(currentBudget.amountMinor)}</strong></div>
-          <div className="bar-track budget-track"><div className={expenses > currentBudget.amountMinor ? 'bar-fill over-budget' : 'bar-fill'} style={{width:`${Math.min(100, expenses/currentBudget.amountMinor*100)}%`}}/></div>
-          <div className="budget-footer"><span>已使用 {budgetProgress(expenses,currentBudget.amountMinor).percent}%</span><strong className={expenses > currentBudget.amountMinor ? 'over-text' : ''}>{expenses > currentBudget.amountMinor ? '超出' : '剩余'} ¥ {money(Math.abs(currentBudget.amountMinor - expenses))}</strong></div>
-        </section>}
-        <div className="section-heading"><h2>最近记录</h2><button onClick={() => setTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
+        <div className="section-heading home-section-heading"><h2>消费都花在哪了</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
+        {byCategory.length ? <SpendingDonut compact key={month} items={byCategory.map(item => ({ id:item.id, name:categoryName(categoryList,item.id), amount:item.amount }))} onOpenCategory={openCategoryBills}/> : <div className="empty home-chart-empty"><BarChart3 size={25}/><strong>还没有支出记录</strong><span>记一笔账，看看钱都花在哪里</span></div>}
+        <button type="button" className="budget-card budget-action" aria-label={currentBudget ? '查看和管理月度预算' : '设置月度预算'} onClick={() => setBudgetOpen(true)}>
+          {currentBudget ? <>
+            <div className="budget-heading"><span>月度预算</span><strong>管理 <ChevronRight size={15}/></strong></div>
+            <div className="budget-amount-line"><span>已使用 ¥{money(expenses)}</span><strong className={expenses > currentBudget.amountMinor ? 'over-text' : ''}>{expenses > currentBudget.amountMinor ? '超出' : '剩余'} ¥{money(Math.abs(currentBudget.amountMinor - expenses))}</strong></div>
+            <div className="bar-track budget-track"><div className={expenses > currentBudget.amountMinor ? 'bar-fill over-budget' : 'bar-fill'} style={{width:`${Math.min(100, expenses/currentBudget.amountMinor*100)}%`}}/></div>
+            <div className="budget-footer"><span>本月预算 ¥{money(currentBudget.amountMinor)}</span><span>已用 {budgetProgress(expenses,currentBudget.amountMinor).percent}%</span></div>
+          </> : <div className="budget-heading"><span>还没有设置本月预算</span><strong>设置预算 <ChevronRight size={15}/></strong></div>}
+        </button>
+        <div className="section-heading"><h2>最近记录</h2><button onClick={() => goToTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} />) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </>}
-      {tab === 'list' && <>
+      {!budgetOpen && tab === 'list' && <>
         <div className="section-heading"><h2>账单明细</h2><span className="meta">{filteredEntries.length} 笔</span></div>
         {drilldownIds && <div className="filter-notice"><span>正在查看选中的消费分类</span><button onClick={()=>setDrilldownIds(null)}>清除分类筛选</button></div>}
         <div className="ledger-tools">
@@ -290,10 +325,10 @@ export default function App() {
         </div>
         {filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><strong>{day.date}</strong><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
       </>}
-      {tab === 'stats' && <>
+      {!budgetOpen && tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
-        {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} onOpenCategory={ids => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setTab('list') }} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
+        {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} onOpenCategory={openCategoryBills} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
         <div className="section-heading"><h2>近 6 个月支出趋势</h2><span className="meta">截至所选月份</span></div>
         <SpendingTrend points={trend} />
         <div className="section-heading"><h2>月度回顾</h2><span className="meta">{monthLabel(month)}</span></div>
@@ -305,15 +340,7 @@ export default function App() {
         <div className="section-heading"><h2>消费洞察</h2><span className="meta">本地分析 · 无 AI 费用</span></div>
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
       </>}
-      {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card budget-settings"><h3>{monthLabel(month)} · 月度预算</h3>
-        <p>预算只针对当前选择的月份，不会修改任何历史账单。可在首页切换月份查看和调整。</p>
-        {currentBudget && <div className="current-budget">当前预算：¥ {money(currentBudget.amountMinor)} <button type="button" disabled={budgetBusy} onClick={() => void clearBudget()}>取消</button></div>}
-        <form className="manage-add" onSubmit={e => void saveBudget(e)}>
-          <input inputMode="decimal" aria-label="月度预算金额" placeholder="输入预算金额（元）" value={budgetInput} onChange={e=>setBudgetInput(e.target.value)} />
-          <button type="submit" disabled={budgetBusy || !budgetInput.trim()}>{currentBudget ? '更新预算' : '设置预算'}</button>
-        </form>
-        {budgetError && <p className="error" role="alert">{budgetError}</p>}
-      </div><CategoryManager categories={categoryList} /><div className="setting-card"><h3>备份提醒</h3><p>{lastBackup ? `上次生成 JSON 备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}。请确认文件已保存到 iCloud Drive 或「文件」App。` : '尚未记录生成过 JSON 备份。建议现在导出并保存一份。'} 建议至少每周备份一次。本提示不代表文件已经成功保存。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
+      {!budgetOpen && tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card"><h3>关于记账功能</h3><p>新增与管理分类请在「记一笔」中操作；预算可以从首页查看和修改。</p></div><div className="setting-card"><h3>备份提醒</h3><p>{lastBackup ? `上次生成 JSON 备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}。请确认文件已保存到 iCloud Drive 或「文件」App。` : '尚未记录生成过 JSON 备份。建议现在导出并保存一份。'} 建议至少每周备份一次。本提示不代表文件已经成功保存。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；CSV 仅用于表格查看，不能用于完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
@@ -333,11 +360,43 @@ export default function App() {
       </div>
       <div className="setting-card"><h3>添加到 iPhone 桌面</h3><p>请使用 Safari 打开此网址，点击「分享」→「添加到主屏幕」。首次访问需要联网，之后可离线记账。</p></div>
       <div className="setting-card"><h3>版本</h3><p>SaveMoney 1.0 · 私人使用版</p></div></>}
+      {budgetOpen && <section className="budget-detail">
+        <button type="button" className="back-link" onClick={() => setBudgetOpen(false)}><ChevronLeft size={18}/> 返回首页</button>
+        <div className="section-heading"><h2>{monthLabel(month)} · 月度预算</h2></div>
+        <div className="budget-detail-summary">
+          <p>{currentBudget ? expenses > currentBudget.amountMinor ? '本月已超出预算' : '本月剩余可支配' : '还没有设定预算'}</p>
+          <h1>{currentBudget ? `¥ ${money(Math.abs(currentBudget.amountMinor-expenses))}` : '设定消费目标'}</h1>
+          {currentBudget && <>
+            <div className="bar-track budget-track"><div className={expenses>currentBudget.amountMinor ? 'bar-fill over-budget' : 'bar-fill'} style={{width:`${Math.min(100, expenses/currentBudget.amountMinor*100)}%`}} /></div>
+            <div className="budget-detail-totals"><span>已支出 ¥{money(expenses)}</span><span>预算 ¥{money(currentBudget.amountMinor)}</span></div>
+          </>}
+        </div>
+        {currentBudget && (() => {
+          const today = new Date()
+          const isCurrent = month === monthString(today)
+          const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5)), 0).getDate()
+          const remainingDays = isCurrent ? Math.max(0, daysInMonth-today.getDate()+1) : 0
+          const remaining = currentBudget.amountMinor-expenses
+          return <div className="budget-detail-metrics">
+            <div><span>剩余天数</span><strong>{isCurrent ? `${remainingDays} 天` : '—'}</strong></div>
+            <div><span>日均可用</span><strong>{isCurrent && remainingDays ? `¥${money(Math.max(0,Math.floor(remaining/remainingDays)))}` : '—'}</strong></div>
+          </div>
+        })()}
+        <div className="setting-card budget-editor-card"><h3>{currentBudget ? '调整本月预算' : '设置本月预算'}</h3><p>预算仅作用于 {monthLabel(month)}，不改变已有账单。</p>
+          <form className="budget-editor-form" onSubmit={e => void saveBudget(e)}>
+            <label htmlFor="budget-input">预算金额（元）</label>
+            <input id="budget-input" inputMode="decimal" placeholder="例如 4000" value={budgetInput} onChange={e => setBudgetInput(e.target.value)}/>
+            {budgetError && <p className="error" role="alert">{budgetError}</p>}
+            <button className="save-button" type="submit" disabled={budgetBusy || !budgetInput.trim()}>{budgetBusy ? '保存中…' : currentBudget ? '保存预算调整' : '创建月度预算'}</button>
+          </form>
+          {currentBudget && <button type="button" className="delete-button" disabled={budgetBusy} onClick={() => void clearBudget()}><Trash2 size={15}/> 取消本月预算</button>}
+        </div>
+      </section>}
     </main>
     <nav className="bottom-nav" aria-label="主导航">
-      {nav.slice(0,2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => setTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
+      {nav.slice(0,2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => goToTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
       <button className="add-button" aria-label="记一笔" onClick={() => openEditor('new')}><Plus size={25}/></button>
-      {nav.slice(2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => setTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
+      {nav.slice(2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => goToTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
     </nav>
     {editing && <EntryEditor key={editing === 'new' ? 'new' : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} onClose={() => setEditing(null)}/>}
   </div>
