@@ -713,3 +713,8 @@
 .daily-chart-touch-layer{position:absolute;left:3.636%;width:92.727%;top:0;height:100%;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);z-index:2}
 .daily-chart-touch-day{appearance:none;-webkit-appearance:none;display:block;min-width:0;width:100%;height:100%;margin:0;padding:0;border:0;border-radius:0;background:transparent;cursor:pointer;touch-action:manipulation}
 .daily-chart-touch-day:focus-visible{outline:2px solid #527d66;outline-offset:-2px;background:rgba(82,125,102,.06)}
+
+/* Phase E: avoid permanent compositor layers for every ledger entry. */
+.swipe-entry-content{will-change:auto}
+.swipe-entry.is-dragging .swipe-entry-content{will-change:transform;transition:none}
+@media(prefers-reduced-motion:reduce){.swipe-entry.is-dragging .swipe-entry-content{transition:none}}
