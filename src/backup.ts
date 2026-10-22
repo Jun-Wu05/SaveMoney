@@ -1,4 +1,4 @@
-import { db, type Category, type Entry, type Budget } from './db'
+import { db, type Category, type Entry, type Budget, type CategoryBudget } from './db'
 
 export const BACKUP_FORMAT = 'savemoney-backup'
 export const BACKUP_VERSION = 1
@@ -12,6 +12,7 @@ export type BackupData = {
   entries: Entry[]
   categories: Category[]
   budgets?: Budget[]
+  categoryBudgets?: CategoryBudget[]
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -76,6 +77,14 @@ export function validateBackupText(text: string): BackupData {
   const budgets = data.budgets === undefined ? [] : data.budgets
   if (!Array.isArray(budgets) || budgets.length > 1200 || !budgets.every((b: unknown) => isObject(b) && typeof b.month === 'string' && /^\\d{4}-(0[1-9]|1[0-2])$/.test(b.month) && typeof b.amountMinor === 'number' && Number.isSafeInteger(b.amountMinor) && b.amountMinor > 0 && b.amountMinor <= 99_999_999_999)) throw new Error('备份中的月度预算无效')
   if (new Set((budgets as Budget[]).map(b => b.month)).size !== budgets.length) throw new Error('备份包含重复的预算月份')
+  const categoryBudgets = data.categoryBudgets === undefined ? [] : data.categoryBudgets
+  if (!Array.isArray(categoryBudgets) || categoryBudgets.length > 60_000 || !categoryBudgets.every((b: unknown) =>
+    isObject(b) && typeof b.month === 'string' && /^\\d{4}-(0[1-9]|1[0-2])$/.test(b.month) &&
+    isString(b.categoryId, 100) && b.categoryId.length > 0 &&
+    b.id === `${b.month}:${b.categoryId}` &&
+    typeof b.amountMinor === 'number' && Number.isSafeInteger(b.amountMinor) && b.amountMinor > 0 && b.amountMinor <= 99_999_999_999
+  )) throw new Error('备份中的分类预算无效')
+  if (new Set((categoryBudgets as CategoryBudget[]).map(b => b.id)).size !== categoryBudgets.length) throw new Error('备份包含重复的分类预算')
   const entries = data.entries as Entry[]
   const categories = data.categories as Category[]
   const uniqueEntryIds = new Set(entries.map(e => e.id))
@@ -87,12 +96,13 @@ export function validateBackupText(text: string): BackupData {
   if (entries.some(e => index.get(e.categoryId) !== e.type)) {
     throw new Error('备份存在缺失或类型错误的分类')
   }
-  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: data.exportedAt, entries, categories, budgets: budgets as Budget[] }
+  if ((categoryBudgets as CategoryBudget[]).some(b => !categories.some(c => c.id === b.categoryId && c.type === 'expense'))) throw new Error('分类预算引用了无效的支出分类')
+  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: data.exportedAt, entries, categories, budgets: budgets as Budget[], categoryBudgets: categoryBudgets as CategoryBudget[] }
 }
 
 export async function createBackup(): Promise<BackupData> {
-  const [entries, categories, budgets] = await Promise.all([db.entries.toArray(), db.categories.toArray(), db.budgets.toArray()])
-  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), entries, categories, budgets }
+  const [entries, categories, budgets, categoryBudgets] = await Promise.all([db.entries.toArray(), db.categories.toArray(), db.budgets.toArray(), db.categoryBudgets.toArray()])
+  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), entries, categories, budgets, categoryBudgets }
 }
 
 function download(name: string, text: string, mime: string) {
@@ -137,12 +147,14 @@ export async function downloadCsv() {
 export async function restoreBackup(backup: BackupData): Promise<void> {
   // 再次校验，以防传入的对象在预览后被修改。
   const safe = validateBackupText(JSON.stringify(backup))
-  await db.transaction('rw', db.entries, db.categories, db.budgets, async () => {
+  await db.transaction('rw', db.entries, db.categories, db.budgets, db.categoryBudgets, async () => {
     await db.entries.clear()
     await db.categories.clear()
     await db.budgets.clear()
+    await db.categoryBudgets.clear()
     await db.categories.bulkAdd(safe.categories)
     if (safe.budgets?.length) await db.budgets.bulkAdd(safe.budgets)
+    if (safe.categoryBudgets?.length) await db.categoryBudgets.bulkAdd(safe.categoryBudgets)
     await db.entries.bulkAdd(safe.entries)
   })
 }
