@@ -31,6 +31,13 @@ export function DailySpendingChart({ summary }: { summary: DailySummary }) {
       {[1, 8, 15, 22, summary.points.length].map((day, i) =>
         <text key={i} x={left + (day - .5) * step} y="145" textAnchor="middle" fontSize="10" fill="#879087">{day}日</text>)}
     </svg>
+    <div className="daily-chart-touch-layer" aria-label="选择消费日期">
+      {summary.points.map(p => <button key={p.day} type="button" className="daily-chart-touch-day"
+        aria-label={`${p.day}日，支出${money(p.amountMinor)}元`}
+        aria-pressed={selectedDay === p.day}
+        onClick={() => setSelectedDay(p.day)} />)}
+    </div>
+    </div>
     <div className="trend-accessible motion-daily-sr-only">{summary.points.filter(p => p.amountMinor > 0).map(p => <span key={p.day}>{p.day}日 ¥{money(p.amountMinor)}</span>)}</div>
   </section>
 }
