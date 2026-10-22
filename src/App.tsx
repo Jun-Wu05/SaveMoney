@@ -9,6 +9,7 @@ import { SpendingDonut } from './SpendingDonut'
 import { monthlyExpenseTrend, spendingInsights } from './insights'
 import { SpendingTrend } from './SpendingTrend'
 import { groupEntriesByDay } from './dailyGroups'
+import { filterEntries } from './ledgerFilters'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -156,6 +157,9 @@ function CategoryManager({ categories }: { categories: Category[] }) {
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState<TransactionType | 'all'>('all')
+  const [allMonths, setAllMonths] = useState(false)
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [initError, setInitError] = useState(false)
@@ -181,6 +185,7 @@ export default function App() {
   }, [monthEntries])
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
+  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}), [entries,categoryList,searchTerm,filterType,allMonths,month])
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new') => setEditing(entry)
 
@@ -254,7 +259,20 @@ export default function App() {
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => setTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} />) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </>}
-      {tab === 'list' && <><div className="section-heading"><h2>本月账单</h2><span className="meta">{monthEntries.length} 笔</span></div>{monthEntries.length ? groupEntriesByDay(monthEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><strong>{day.date}</strong><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>这个月还没有记录</strong><span>点击下方按钮开始记账</span></div>}</>}
+      {tab === 'list' && <>
+        <div className="section-heading"><h2>账单明细</h2><span className="meta">{filteredEntries.length} 笔</span></div>
+        <div className="ledger-tools">
+          <input aria-label="搜索账单" placeholder="搜索备注或分类…" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
+          <div className="ledger-filters">
+            <button className={!allMonths ? 'active' : ''} onClick={()=>setAllMonths(false)}>本月</button>
+            <button className={allMonths ? 'active' : ''} onClick={()=>setAllMonths(true)}>全部月份</button>
+            <button className={filterType==='all'?'active':''} onClick={()=>setFilterType('all')}>全部</button>
+            <button className={filterType==='expense'?'active':''} onClick={()=>setFilterType('expense')}>支出</button>
+            <button className={filterType==='income'?'active':''} onClick={()=>setFilterType('income')}>收入</button>
+          </div>
+        </div>
+        {filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><strong>{day.date}</strong><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
+      </>}
       {tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
