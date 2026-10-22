@@ -339,3 +339,14 @@
 .ledger-tools input{min-width:0;max-width:100%;box-sizing:border-box}
 .ledger-filters button{min-height:36px;touch-action:manipulation}
 @media(max-width:360px){.ledger-filters{gap:5px}.ledger-filters button{padding:8px 9px;font-size:11px}.expense-calendar{padding-left:9px;padding-right:9px}.calendar-detail-title{flex-wrap:wrap}.calendar-detail-title button{min-height:40px}}
+
+.category-icon-picker{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;width:100%;min-width:0;margin:10px 0 14px}
+.category-icon-picker button{min-width:0;min-height:55px;border:1px solid #e4eae1;border-radius:11px;background:#fafcf9;color:#647669;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:6px 2px;touch-action:manipulation}
+.category-icon-picker button span{font-size:10px;white-space:nowrap}
+.category-icon-picker button.chosen{background:#e2eee3;border-color:#78a185;color:#346b47}
+.category-icon-picker button:focus-visible{outline:2px solid #527d66;outline-offset:2px}
+.manage-category:has(.category-icon-picker){flex-wrap:wrap}
+.manage-category .category-icon-picker{flex-basis:100%;order:5}
+.manage-add{flex-wrap:wrap}
+.manage-add .category-icon-picker{flex-basis:100%}
+@media(max-width:360px){.category-icon-picker{grid-template-columns:repeat(4,minmax(0,1fr))}}

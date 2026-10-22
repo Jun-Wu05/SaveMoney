@@ -10,14 +10,14 @@ export function hasDuplicateCategoryName(categories: Category[], type: Transacti
   return categories.some(category => category.type === type && category.id !== exceptId && category.name.toLocaleLowerCase() === name.toLocaleLowerCase())
 }
 
-export async function addCategory(type: TransactionType, rawName: string): Promise<string> {
+export async function addCategory(type: TransactionType, rawName: string, icon = 'ellipsis'): Promise<string> {
   const name = normalizeCategoryName(rawName)
   return await db.transaction('rw', db.categories, async () => {
     const categories = await db.categories.toArray()
     if (hasDuplicateCategoryName(categories, type, name)) throw new Error('该分类名称已存在')
     const order = Math.max(0, ...categories.filter(c => c.type === type).map(c => c.sortOrder)) + 1
     const id = crypto.randomUUID()
-    await db.categories.add({ id, type, name, icon: 'ellipsis', sortOrder: order })
+    await db.categories.add({ id, type, name, icon, sortOrder: order })
     return id
   })
 }
@@ -42,5 +42,17 @@ export async function deleteUnusedCategory(id: string): Promise<void> {
     const count = await db.categories.where('type').equals(category.type).count()
     if (count <= 1) throw new Error('每种收支类型至少保留一个分类')
     await db.categories.delete(id)
+  })
+}
+
+export async function updateCategoryDetails(id: string, rawName: string, icon: string): Promise<void> {
+  const name = normalizeCategoryName(rawName)
+  if (!/^[a-z][a-z0-9-]{0,49}$/.test(icon)) throw new Error('分类图标无效')
+  await db.transaction('rw', db.categories, async () => {
+    const category = await db.categories.get(id)
+    if (!category) throw new Error('分类不存在')
+    const categories = await db.categories.toArray()
+    if (hasDuplicateCategoryName(categories, category.type, name, id)) throw new Error('该分类名称已存在')
+    await db.categories.update(id, { name, icon })
   })
 }

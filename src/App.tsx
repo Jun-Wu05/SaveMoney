@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { blockSheetTouchMove } from './modalGestures'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BarChart3, BookOpen, Bus, CalendarDays, ChevronLeft, ChevronRight, Delete, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase } from 'lucide-react'
+import { BarChart3, BookOpen, Bus, CalendarDays, ChevronLeft, ChevronRight, Delete, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase, Coffee, CarFront, Plane, Gamepad2, HeartPulse, PawPrint, Shirt, Smartphone, Music, Dumbbell, PiggyBank } from 'lucide-react'
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
-import { addCategory, renameCategory, deleteUnusedCategory } from './categories'
+import { addCategory, updateCategoryDetails, deleteUnusedCategory } from './categories'
 import { budgetProgress, removeMonthlyBudget, setMonthlyBudget } from './budget'
 import { SpendingDonut } from './SpendingDonut'
 import { monthlyExpenseTrend, spendingInsights } from './insights'
@@ -30,7 +30,20 @@ const nav = [
 ] as const
 const icons: Record<string, typeof Home> = {
   utensils: Utensils, 'shopping-bag': ShoppingBag, bus: Bus, house: House, film: Film,
-  heart: Heart, book: BookOpen, ellipsis: Ellipsis, wallet: Wallet, gift: Gift, briefcase: Briefcase,
+  heart: Heart, book: BookOpen, ellipsis: Ellipsis, wallet: Wallet, gift: Gift, briefcase: Briefcase, coffee: Coffee, 'car-front': CarFront, plane: Plane, 'gamepad-2': Gamepad2, 'heart-pulse': HeartPulse, 'paw-print': PawPrint, shirt: Shirt, smartphone: Smartphone, music: Music, dumbbell: Dumbbell, 'piggy-bank': PiggyBank,
+}
+const iconChoices = [
+  ['utensils','餐饮'],['coffee','咖啡'],['shopping-bag','购物'],['shirt','服饰'],
+  ['bus','交通'],['car-front','汽车'],['house','住房'],['plane','旅行'],
+  ['film','娱乐'],['gamepad-2','游戏'],['heart','健康'],['heart-pulse','医疗'],
+  ['book','学习'],['paw-print','宠物'],['gift','礼物'],['smartphone','数码'],
+  ['music','音乐'],['dumbbell','运动'],['wallet','钱包'],['piggy-bank','储蓄'],
+  ['briefcase','工作'],['ellipsis','其他'],
+] as const
+function IconPicker({ value, onChange }: { value: string; onChange: (icon: string) => void }) {
+  return <div className="category-icon-picker" role="group" aria-label="选择分类图标">
+    {iconChoices.map(([key,label])=>{const Icon=icons[key];return <button key={key} type="button" aria-label={label} aria-pressed={value===key} className={value===key?'chosen':''} onClick={()=>onChange(key)}><Icon size={20}/><span>{label}</span></button>})}
+  </div>
 }
 const pad = (v: number) => String(v).padStart(2, '0')
 const isValidLocalDate = (value: string) => {
@@ -70,6 +83,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
   const [busy, setBusy] = useState(false)
   const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryIcon, setNewCategoryIcon] = useState('ellipsis')
   const [categoryBusy, setCategoryBusy] = useState(false)
   const [customKeypad, setCustomKeypad] = useState(true)
   const keypadKeys: AmountKey[] = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
@@ -179,7 +193,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
     setCategoryBusy(true)
     setError('')
     try {
-      const id = await addCategory(type, newCategoryName)
+      const id = await addCategory(type, newCategoryName, newCategoryIcon)
       setCategoryId(id)
       setNewCategoryName('')
       setCategoryView('list')
@@ -194,6 +208,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
         <p>新增{type === 'expense' ? '支出' : '收入'}分类，完成后将自动选中；已填写的金额、日期和备注都会保留。</p>
         <label htmlFor="new-category-name">分类名称</label>
         <input id="new-category-name" maxLength={20} autoFocus placeholder="例如：宠物、旅行" value={newCategoryName} onChange={event => setNewCategoryName(event.target.value)}/>
+        <label>选择图标</label><IconPicker value={newCategoryIcon} onChange={setNewCategoryIcon}/>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="save-button" disabled={!newCategoryName.trim() || categoryBusy} type="submit">{categoryBusy ? '添加中…' : '添加并选中'}</button>
       </form>}
@@ -232,8 +247,10 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
 function CategoryManager({ categories, initialType = 'expense' }: { categories: Category[]; initialType?: TransactionType }) {
   const [type, setType] = useState<TransactionType>(initialType)
   const [newName, setNewName] = useState('')
+  const [newIcon, setNewIcon] = useState('ellipsis')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editIcon, setEditIcon] = useState('ellipsis')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -258,20 +275,22 @@ function CategoryManager({ categories, initialType = 'expense' }: { categories: 
     <div className="manage-list">{shown.map(category => <div className="manage-category" key={category.id}>
       {editingId === category.id ? <>
         <input aria-label="编辑分类名称" maxLength={20} value={editName} onChange={e => setEditName(e.target.value)}/>
-        <button type="button" disabled={busy} onClick={() => void perform(() => renameCategory(category.id,editName),() => setEditingId(null))}>保存</button>
+        <IconPicker value={editIcon} onChange={setEditIcon}/>
+        <button type="button" disabled={busy} onClick={() => void perform(() => updateCategoryDetails(category.id,editName,editIcon),() => setEditingId(null))}>保存</button>
         <button type="button" disabled={busy} onClick={() => setEditingId(null)}>取消</button>
       </> : <>
         <span>{category.name}</span>
-        <button type="button" disabled={busy} onClick={() => {setEditingId(category.id);setEditName(category.name);setError('')}}>改名</button>
+        <button type="button" disabled={busy} onClick={() => {setEditingId(category.id);setEditName(category.name);setEditIcon(category.icon);setError('')}}>编辑</button>
         <button type="button" disabled={busy} onClick={() => {
           if (window.confirm(`确定删除「${category.name}」？已有账单的分类无法删除。`))
             void perform(() => deleteUnusedCategory(category.id))
         }}>删除</button>
       </>}
     </div>)}</div>
-    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName) },() => setNewName(''))}}>
+    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName,newIcon) },() => {setNewName('');setNewIcon('ellipsis')})}}>
       <input aria-label="新分类名称" maxLength={20} placeholder="添加新分类，如 宠物" value={newName} onChange={e => setNewName(e.target.value)}/>
       <button disabled={busy || !newName.trim()} type="submit">添加</button>
+      <IconPicker value={newIcon} onChange={setNewIcon}/>
     </form>
     {error && <p className="error" role="alert">{error}</p>}
   </div>
