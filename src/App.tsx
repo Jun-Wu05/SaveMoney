@@ -17,7 +17,14 @@ const icons: Record<string, typeof Home> = {
   heart: Heart, book: BookOpen, ellipsis: Ellipsis, wallet: Wallet, gift: Gift, briefcase: Briefcase,
 }
 const pad = (v: number) => String(v).padStart(2, '0')
-const isValidLocalDate = (value: string) => { const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(value); if (!match) return false; const [y,m,d] = match.slice(1).map(Number); const actual = new Date(0); actual.setFullYear(y,m-1,d); return actual.getFullYear() === y && actual.getMonth() === m-1 && actual.getDate() === d }
+const isValidLocalDate = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return false
+  const [year, month, day] = match.slice(1).map(Number)
+  const actual = new Date(0)
+  actual.setFullYear(year, month - 1, day)
+  return actual.getFullYear() === year && actual.getMonth() === month - 1 && actual.getDate() === day
+}
 const monthString = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
 const monthLabel = (month: string) => `${Number(month.slice(0, 4))} 年 ${Number(month.slice(5))} 月`
 const categoryName = (all: Category[], id: string) => all.find(c => c.id === id)?.name ?? '已删除分类'
@@ -53,7 +60,7 @@ function EntryEditor({ categories, entry, onClose }: { categories: Category[]; e
     if (busy) return
     const amountMinor = parseAmountMinor(amount)
     if (amountMinor === null) return setError('请输入正确的金额，最多两位小数')
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(`${date}T12:00:00`).valueOf())) return setError('请选择有效日期')
+    if (!isValidLocalDate(date)) return setError('请选择有效日期')
     if (!selected) return setError('请先选择分类')
     setBusy(true); setError('')
     const timestamp = new Date().toISOString()
