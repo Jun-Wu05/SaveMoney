@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { blockSheetTouchMove } from './modalGestures'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { BarChart3, BookOpen, Bus, CalendarDays, ChevronLeft, ChevronRight, Delete, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase } from 'lucide-react'
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
@@ -70,10 +72,73 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
   const [customKeypad, setCustomKeypad] = useState(true)
   const keypadKeys: AmountKey[] = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
   const applyAmountKey = (key: AmountKey) => { setAmount(current => pressAmountKey(current,key)); setError('') }
+  const overlayRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = previousOverflow }
+    const scrollY = window.scrollY
+    const body = document.body
+    const root = document.documentElement
+    const originalBody = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    }
+    const originalRootOverflow = root.style.overflow
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+    root.style.overflow = 'hidden'
+
+    const overlay = overlayRef.current
+    let touchX = 0
+    let touchY = 0
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return
+      touchX = event.touches[0].clientX
+      touchY = event.touches[0].clientY
+    }
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return
+      const touch = event.touches[0]
+      const dx = touch.clientX - touchX
+      const dy = touch.clientY - touchY
+      const target = event.target
+      const scroller = target instanceof Element ? target.closest<HTMLElement>('.editor-scroller') : null
+      if (blockSheetTouchMove({
+        deltaX: dx, deltaY: dy, inScroller: Boolean(scroller),
+        scrollTop: scroller?.scrollTop ?? 0,
+        scrollHeight: scroller?.scrollHeight ?? 0,
+        clientHeight: scroller?.clientHeight ?? 0,
+      }) && event.cancelable) event.preventDefault()
+    }
+    // Safari requires a non-passive native listener to suppress rubber-band scroll.
+    overlay?.addEventListener('touchstart', onTouchStart, { passive: true })
+    overlay?.addEventListener('touchmove', onTouchMove, { passive: false })
+    const viewport = window.visualViewport
+    const syncViewport = () => {
+      if (!overlay) return
+      overlay.style.height = `${viewport?.height ?? window.innerHeight}px`
+      overlay.style.top = `${viewport?.offsetTop ?? 0}px`
+    }
+    syncViewport()
+    viewport?.addEventListener('resize', syncViewport)
+    viewport?.addEventListener('scroll', syncViewport)
+    return () => {
+      overlay?.removeEventListener('touchstart', onTouchStart)
+      overlay?.removeEventListener('touchmove', onTouchMove)
+      viewport?.removeEventListener('resize', syncViewport)
+      viewport?.removeEventListener('scroll', syncViewport)
+      body.style.position = originalBody.position
+      body.style.top = originalBody.top
+      body.style.left = originalBody.left
+      body.style.width = originalBody.width
+      body.style.overflow = originalBody.overflow
+      root.style.overflow = originalRootOverflow
+      window.scrollTo(0, scrollY)
+    }
   }, [])
   const available = preferredCategories(entries, categories, type)
   const recentCategoryId = lastEntryOfType(entries, type)?.categoryId
@@ -120,7 +185,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
     finally { setCategoryBusy(false) }
   }
 
-  return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+  return createPortal(<div ref={overlayRef} className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="editor" role="dialog" aria-modal="true" aria-label={entry ? '编辑账单' : '记一笔'}>
       <header className="editor-header"><button type="button" className="icon-button" onClick={categoryView !== 'list' ? () => { setCategoryView('list'); setError('') } : onClose} aria-label={categoryView !== 'list' ? '返回记账' : '关闭'}>{categoryView !== 'list' ? <ChevronLeft size={22}/> : <X size={22}/>}</button><strong>{categoryView === 'manage' ? '管理分类' : categoryView === 'new' ? '新增分类' : entry ? '编辑账单' : '记一笔'}</strong><span style={{width:40}}/></header>
       {categoryView === 'new' && <form className="inline-category-form editor-scroller" onSubmit={createInlineCategory}>
@@ -159,7 +224,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
         <button className="save-button" type="submit" form="entry-editor-form" disabled={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
       </footer>}
     </section>
-  </div>
+  </div>, document.body)
 }
 
 function CategoryManager({ categories, initialType = 'expense' }: { categories: Category[]; initialType?: TransactionType }) {
