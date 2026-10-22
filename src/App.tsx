@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BarChart3, BookOpen, Bus, ChevronLeft, ChevronRight, CirclePlus, Ellipsis, Film, Gift, Heart, Home, House, List, Pencil, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase, CheckCircle2 } from 'lucide-react'
+import { BarChart3, BookOpen, Bus, ChevronLeft, ChevronRight, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase } from 'lucide-react'
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
 
