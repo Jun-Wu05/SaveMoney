@@ -19,6 +19,6 @@ export function DailySpendingChart({ summary }: { summary: DailySummary }) {
       {[1, 8, 15, 22, summary.points.length].map((day, i) =>
         <text key={i} x={left + (day - .5) * step} y="145" textAnchor="middle" fontSize="10" fill="#879087">{day}日</text>)}
     </svg>
-    <div className="trend-accessible">{summary.points.filter(p => p.amountMinor > 0).map(p => <span key={p.day}>{p.day}日 ¥{money(p.amountMinor)}</span>)}</div>
+    <div className="trend-accessible motion-daily-sr-only">{summary.points.filter(p => p.amountMinor > 0).map(p => <span key={p.day}>{p.day}日 ¥{money(p.amountMinor)}</span>)}</div>
   </section>
 }
