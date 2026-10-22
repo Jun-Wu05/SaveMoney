@@ -312,3 +312,13 @@
 .ledger-result-summary em{font-style:normal;font-size:12px;font-weight:500;color:#64816c;margin-left:9px}
 .ledger-result-summary button{flex:none;border:0;background:#e7eee7;color:#426b51;border-radius:10px;padding:9px 10px;font-size:11px;font-weight:650;min-height:36px}
 @media(max-width:360px){.ledger-result-summary{align-items:flex-start}.ledger-result-summary em{display:block;margin:5px 0 0}}
+
+/* SaveMoney 2.0 — ledger daily grouping clarity. */
+.day-group{margin:10px 0 22px}
+.day-heading{padding:12px 0;align-items:center;gap:12px}
+.day-date{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+.day-date strong{font-size:13px;white-space:nowrap}
+.day-date small{font-size:11px;color:#879388;white-space:nowrap}
+.day-heading>span{font-size:11px;line-height:1.6;font-variant-numeric:tabular-nums;max-width:56%}
+.day-group .entry-row:last-child{border-bottom:0}
+@media(max-width:360px){.day-heading{align-items:flex-start}.day-heading>span{max-width:55%}}
