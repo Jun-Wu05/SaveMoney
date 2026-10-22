@@ -500,3 +500,10 @@
 /* iOS Safari zooms the entire viewport when a focused input computes below 16px. */
 .editor input,.editor textarea,.editor select{font-size:16px!important;line-height:1.4}
 .editor .form-fields input{font-size:16px!important}
+
+/* Ledger V2: compact native date/category controls. */
+.ledger-advanced-filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;min-width:0}
+.ledger-advanced-filters label{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:11px;color:#7d887d}
+.ledger-advanced-filters input,.ledger-advanced-filters select{display:block;width:100%;max-width:100%;min-width:0;height:44px;padding:0 9px;border:1px solid #e1e7df;border-radius:11px;background:#fff;color:#334438;font-size:16px}
+.ledger-advanced-filters select{font-size:14px;text-overflow:ellipsis}
+@media(max-width:360px){.ledger-advanced-filters{gap:7px}.ledger-advanced-filters input,.ledger-advanced-filters select{padding:0 6px}}
