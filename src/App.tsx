@@ -17,6 +17,7 @@ const icons: Record<string, typeof Home> = {
   heart: Heart, book: BookOpen, ellipsis: Ellipsis, wallet: Wallet, gift: Gift, briefcase: Briefcase,
 }
 const pad = (v: number) => String(v).padStart(2, '0')
+const isValidLocalDate = (value: string) => { const match = /^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(value); if (!match) return false; const [y,m,d] = match.slice(1).map(Number); const actual = new Date(0); actual.setFullYear(y,m-1,d); return actual.getFullYear() === y && actual.getMonth() === m-1 && actual.getDate() === d }
 const monthString = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`
 const monthLabel = (month: string) => `${Number(month.slice(0, 4))} 年 ${Number(month.slice(5))} 月`
 const categoryName = (all: Category[], id: string) => all.find(c => c.id === id)?.name ?? '已删除分类'
