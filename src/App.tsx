@@ -451,7 +451,6 @@ export default function App() {
   const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>(!drilldownIds || drilldownIds.includes(e.categoryId)) && (!ledgerCategory || e.categoryId === ledgerCategory) && (!ledgerDate || e.date === ledgerDate)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds,ledgerCategory,ledgerDate])
   const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterType !== 'all' || allMonths || ledgerDate || ledgerCategory)
   const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterType('all'); setAllMonths(false); setLedgerDate(''); setLedgerCategory(''); setCalendarDate(null) }
-  const jumpToLedgerDate = (date: string) => { setLedgerDate(date); if (date) { setMonth(date.slice(0,7)); setAllMonths(false); setCalendarDate(date) } else setCalendarDate(null) }
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new', date?: string) => { setCopyTemplate(null); setNewEntryDate(date); setEditing(entry) }
   const duplicateEntry = (entry: Entry) => { setCopyTemplate(entry); setNewEntryDate(undefined); setEditing('new') }
@@ -587,12 +586,11 @@ export default function App() {
           <div className="ledger-filters">
             <button className={!allMonths ? 'active' : ''} onClick={()=>setAllMonths(false)}>本月</button>
             {ledgerView==='list' && <button className={allMonths ? 'active' : ''} onClick={()=>{setAllMonths(true);setLedgerDate('')}}>全部月份</button>}
-            <button className={filterType==='all'?'active':''} onClick={()=>setFilterType('all')}>全部</button>
+            <button className={filterType==='all'?'active':''} onClick={()=>setFilterType('all')}>全部收支</button>
             <button className={filterType==='expense'?'active':''} onClick={()=>{setFilterType('expense');if(categoryList.find(c=>c.id===ledgerCategory)?.type==='income')setLedgerCategory('')}}>支出</button>
             <button className={filterType==='income'?'active':''} onClick={()=>{setFilterType('income');if(categoryList.find(c=>c.id===ledgerCategory)?.type==='expense')setLedgerCategory('')}}>收入</button>
           </div>
           <div className="ledger-advanced-filters">
-            <label><span>快速定位日期</span><input aria-label="定位账单日期" type="date" value={ledgerDate} onChange={e=>jumpToLedgerDate(e.target.value)}/></label>
             <label><span>按分类筛选</span><select aria-label="筛选账单分类" value={ledgerCategory} onChange={e=>setLedgerCategory(e.target.value)}><option value="">全部分类</option>{categoryList.filter(c=>filterType==='all'||c.type===filterType).map(c=><option key={c.id} value={c.id}>{c.type==='income'?'收入 · ':'支出 · '}{c.name}</option>)}</select></label>
           </div>
         </div>
