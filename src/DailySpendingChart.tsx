@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { money } from './money'
 import type { DailySummary } from './dailySpending'
 
-export function DailySpendingChart({ summary }: { summary: DailySummary }) {
+function DailySpendingChart({ summary }: { summary: DailySummary }) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const max = Math.max(1, ...summary.points.map(p => p.amountMinor))
   const width = 330, left = 12, chartWidth = 306, base = 122
@@ -41,3 +41,5 @@ export function DailySpendingChart({ summary }: { summary: DailySummary }) {
     <div className="trend-accessible motion-daily-sr-only">{summary.points.filter(p => p.amountMinor > 0).map(p => <span key={p.day}>{p.day}日 ¥{money(p.amountMinor)}</span>)}</div>
   </section>
 }
+
+export const MemoDailySpendingChart = memo(DailySpendingChart, (a, b) => a.summary.comparedDays === b.summary.comparedDays && a.summary.points.length === b.summary.points.length && a.summary.points.every((p, i) => p.day === b.summary.points[i].day && p.amountMinor === b.summary.points[i].amountMinor))

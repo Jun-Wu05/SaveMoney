@@ -11,8 +11,8 @@ import { setCategoryBudget, removeCategoryBudget } from './categoryBudget'
 import { SpendingDonut } from './SpendingDonut'
 import { monthlyExpenseTrend, spendingInsights } from './insights'
 import { dailySpendingSummary } from './dailySpending'
-import { DailySpendingChart } from './DailySpendingChart'
-import { SpendingTrend } from './SpendingTrend'
+import { MemoDailySpendingChart } from './DailySpendingChart'
+import { MemoSpendingTrend } from './SpendingTrend'
 import { groupEntriesByDay } from './dailyGroups'
 import { calculateMonthlyReview, reviewSentence } from './monthlyReview'
 import { filterEntries } from './ledgerFilters'
@@ -642,12 +642,12 @@ export default function App() {
           </div>
         </section>
         <div className="section-heading"><h2>每日消费趋势</h2><span className="meta">前 {dailySummary.comparedDays} 天 · 对比上月同期</span></div>
-        <DailySpendingChart key={month} summary={dailySummary} />
+        <MemoDailySpendingChart key={month} summary={dailySummary} />
         <div className="stats-v2-compare">本期 ¥{money(dailySummary.totalMinor)} <span>上期 ¥{money(dailySummary.previousMinor)}</span></div>
         <div className="section-heading"><h2>分类消费排行</h2><span className="meta">点击分类查看账单</span></div>
         {byCategory.length ? <div className="stats-v2-ranking motion-ranking">{byCategory.map((item,index)=><button type="button" key={item.id} onClick={()=>openCategoryBills([item.id])}><span className="stats-v2-rank">{index+1}</span><span className="stats-v2-rank-main"><span className="stats-v2-rank-title"><strong>{categoryName(categoryList,item.id)}</strong><b>¥{money(item.amount)}</b></span><span className="stats-v2-track"><i style={{width:`${expenses>0?item.amount/expenses*100:0}%`}}/></span></span><span className="stats-v2-share">{expenses>0?(item.amount/expenses*100).toFixed(1):'0.0'}%</span><ChevronRight size={14}/></button>)}</div> : <div className="empty"><BarChart3 size={26}/><strong>暂无支出数据</strong><span>记账后即可查看分类排行</span></div>}
         <div className="section-heading"><h2>近 6 个月支出趋势</h2><span className="meta">截至所选月份</span></div>
-        <SpendingTrend points={trend} />
+        <MemoSpendingTrend points={trend} />
         <div className="section-heading"><h2>月度回顾</h2><span className="meta">{monthLabel(month)}</span></div>
         <section className="review-card">
           <div className="review-metrics"><div><small>本月支出</small><strong>¥{money(review.expenseMinor)}</strong></div><div><small>本月收入</small><strong>¥{money(review.incomeMinor)}</strong></div><div><small>记账天数</small><strong>{review.days} 天</strong></div><div><small>最多支出类别</small><strong>{review.topCategory ?? '暂无'}</strong></div></div>

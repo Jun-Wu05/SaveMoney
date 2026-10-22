@@ -1,7 +1,8 @@
+import { memo } from 'react'
 import { money } from './money'
 import type { MonthlyPoint } from './insights'
 
-export function SpendingTrend({ points }: { points: MonthlyPoint[] }) {
+function SpendingTrend({ points }: { points: MonthlyPoint[] }) {
   const width = 320, height = 148, top = 12, bottom = 112
   const max = Math.max(1, ...points.map(p => p.expenseMinor))
   const coords = points.map((p, i) => ({
@@ -24,3 +25,5 @@ export function SpendingTrend({ points }: { points: MonthlyPoint[] }) {
     <div className="trend-accessible">{points.map(p => <span key={p.month}>{p.month.slice(5)}月 ¥{money(p.expenseMinor)}</span>)}</div>
   </section>
 }
+
+export const MemoSpendingTrend = memo(SpendingTrend, (a, b) => a.points.length === b.points.length && a.points.every((p, i) => p.month === b.points[i].month && p.expenseMinor === b.points[i].expenseMinor))
