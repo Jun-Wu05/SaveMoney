@@ -524,3 +524,18 @@
 .ledger-v3-filter-hint button{border:0;background:transparent;color:#527d66;font-weight:650}
 .ledger-v3-heading + .expense-calendar,.ledger-v3-filter-hint + .expense-calendar{margin-top:0}
 @media(max-width:360px){.app-header{padding-top:max(calc(23px + env(safe-area-inset-top)),65px)}.ledger-v3-actions{gap:5px}}
+
+/* iPhone ledger: prevent native picker overlap; align calendar selection. */
+.ledger-v3-panel,.ledger-v3-panel *{box-sizing:border-box}
+.ledger-v3-panel .ledger-advanced-filters{display:block;min-width:0;margin-top:10px}
+.ledger-v3-panel .ledger-advanced-filters label{display:flex;width:100%;min-width:0;gap:8px}
+.ledger-v3-panel .ledger-advanced-filters select{display:block;width:100%;min-width:0;max-width:100%;height:46px;line-height:normal;padding:0 36px 0 13px;appearance:auto;-webkit-appearance:menulist;font-size:16px}
+.ledger-v3-panel .ledger-filters{margin-bottom:12px}
+.calendar-day{height:64px;min-height:64px;max-height:64px;justify-content:flex-start;align-items:center;overflow:hidden;padding:9px 2px 7px;gap:4px}
+.calendar-day strong{display:block;flex:0 0 auto;line-height:19px;text-align:center}
+.calendar-day small{display:block;flex:0 0 auto;min-height:11px;line-height:11px;text-align:center}
+.calendar-day.is-selected{border-width:1px}
+.calendar-detail-title{align-items:flex-start}
+.calendar-detail-title>div{flex:1;min-width:0}
+.calendar-detail-title strong,.calendar-detail-title small{display:block;overflow-wrap:anywhere}
+@media(max-width:360px){.calendar-day{height:58px;min-height:58px;max-height:58px;padding:7px 1px 5px}}
