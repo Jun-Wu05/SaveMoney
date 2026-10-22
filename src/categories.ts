@@ -34,13 +34,14 @@ export async function renameCategory(id: string, rawName: string): Promise<void>
 }
 
 export async function deleteUnusedCategory(id: string): Promise<void> {
-  await db.transaction('rw', db.categories, db.entries, async () => {
+  await db.transaction('rw', db.categories, db.entries, db.categoryBudgets, async () => {
     const category = await db.categories.get(id)
     if (!category) throw new Error('分类不存在')
     const inUse = await db.entries.where('categoryId').equals(id).count()
     if (inUse) throw new Error('该分类已有账单，请先修改相关账单的分类')
     const count = await db.categories.where('type').equals(category.type).count()
     if (count <= 1) throw new Error('每种收支类型至少保留一个分类')
+    await db.categoryBudgets.where('categoryId').equals(id).delete()
     await db.categories.delete(id)
   })
 }
