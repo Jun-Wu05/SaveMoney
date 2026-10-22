@@ -542,7 +542,7 @@ export default function App() {
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
-      {<div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
+      {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
       {!budgetOpen && tab === 'home' && <>
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
         <div className="section-heading home-section-heading"><h2>消费都花在哪了</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
@@ -639,6 +639,7 @@ export default function App() {
       {budgetOpen && <section className="budget-detail">
         <button type="button" className="back-link" onClick={() => setBudgetOpen(false)}><ChevronLeft size={18}/> 返回首页</button>
         <div className="section-heading"><h2>{monthLabel(month)} · 月度预算</h2></div>
+        <nav className="budget-section-links" aria-label="预算管理快捷入口"><a href="#category-budget-section">分类预算 <ChevronRight size={15}/></a><a href="#monthly-budget-editor">调整总预算 <ChevronRight size={15}/></a></nav>
         <div className="budget-detail-summary">
           <p>{currentBudget ? expenses > currentBudget.amountMinor ? '本月已超出预算' : '本月剩余可支配' : '还没有设定预算'}</p>
           <h1>{currentBudget ? `¥ ${money(Math.abs(currentBudget.amountMinor-expenses))}` : '设定消费目标'}</h1>
@@ -658,7 +659,7 @@ export default function App() {
             <div><span>日均可用</span><strong>{isCurrent && remainingDays ? `¥${money(Math.max(0,Math.floor(remaining/remainingDays)))}` : '—'}</strong></div>
           </div>
         })()}
-        <div className="section-heading"><h2>分类预算</h2><span className="meta">按月独立设置</span></div>
+        <div id="category-budget-section" className="section-heading"><h2>分类预算</h2><span className="meta">按月独立设置</span></div>
         <section className="category-budget-panel">
           <p>给餐饮、购物等支出分类设置独立额度。分类预算不会从月度总预算中重复扣除。</p>
           {categoryList.filter(c => c.type === 'expense').map(category => {
@@ -685,7 +686,7 @@ export default function App() {
             </div>
           })}
         </section>
-        <div className="setting-card budget-editor-card"><h3>{currentBudget ? '调整本月预算' : '设置本月预算'}</h3><p>预算仅作用于 {monthLabel(month)}，不改变已有账单。</p>
+        <div id="monthly-budget-editor" className="setting-card budget-editor-card"><h3>{currentBudget ? '调整本月预算' : '设置本月预算'}</h3><p>预算仅作用于 {monthLabel(month)}，不改变已有账单。</p>
           <form className="budget-editor-form" onSubmit={e => void saveBudget(e)}>
             <label htmlFor="budget-input">预算金额（元）</label>
             <input id="budget-input" inputMode="decimal" placeholder="例如 4000" value={budgetInput} onChange={e => setBudgetInput(e.target.value)}/>
