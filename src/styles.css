@@ -204,6 +204,14 @@
   overscroll-behavior-y:contain;
   -webkit-overflow-scrolling:touch;
   touch-action:pan-y;
+  /* iOS WebKit can paint a bright vertical scroll indicator over the sheet. */
+  scrollbar-width:none;
+  background:#f7f7f2;
+}
+.editor-scroller::-webkit-scrollbar{
+  display:none;
+  width:0;
+  height:0;
 }
 .editor .editor-scroller[hidden]{display:none}
 .editor-footer{
