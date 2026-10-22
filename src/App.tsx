@@ -7,6 +7,7 @@ import { db, initializeCategories, removeEntry, saveEntry, type Category, type E
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
 import { addCategory, updateCategoryDetails, deleteUnusedCategory } from './categories'
 import { budgetProgress, removeMonthlyBudget, setMonthlyBudget } from './budget'
+import { setCategoryBudget, removeCategoryBudget } from './categoryBudget'
 import { SpendingDonut } from './SpendingDonut'
 import { monthlyExpenseTrend, spendingInsights } from './insights'
 import { dailySpendingSummary } from './dailySpending'
@@ -402,10 +403,15 @@ export default function App() {
   useEffect(() => { if (!toast) return; const timeout = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(timeout) }, [toast])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
   const currentBudget = useLiveQuery(() => db.budgets.get(month), [month])
+  const categoryBudgets = useLiveQuery(() => db.categoryBudgets.where('month').equals(month).toArray(), [month], [])
+  const [categoryBudgetEditing, setCategoryBudgetEditing] = useState<string | null>(null)
+  const [categoryBudgetInput, setCategoryBudgetInput] = useState('')
+  const [categoryBudgetBusy, setCategoryBudgetBusy] = useState(false)
+  const [categoryBudgetError, setCategoryBudgetError] = useState('')
   const [budgetInput, setBudgetInput] = useState('')
   const [budgetError, setBudgetError] = useState('')
   const [budgetBusy, setBudgetBusy] = useState(false)
-  useEffect(() => { setBudgetInput(''); setBudgetError('') }, [month])
+  useEffect(() => { setBudgetInput(''); setBudgetError(''); setCategoryBudgetEditing(null); setCategoryBudgetError('') }, [month])
   useEffect(() => { if (budgetOpen && currentBudget) setBudgetInput((currentBudget.amountMinor / 100).toFixed(2)) }, [budgetOpen, currentBudget?.amountMinor, month])
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const categoryList = useMemo(() => categories ?? [], [categories])
@@ -434,6 +440,25 @@ export default function App() {
   const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
   const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next)}
+
+  async function saveCategoryBudgetForm(event: React.FormEvent) {
+    event.preventDefault()
+    if (!categoryBudgetEditing || categoryBudgetBusy) return
+    setCategoryBudgetBusy(true); setCategoryBudgetError('')
+    try {
+      await setCategoryBudget(month, categoryBudgetEditing, categoryBudgetInput)
+      setCategoryBudgetEditing(null); setCategoryBudgetInput('')
+      setToast('分类预算已保存')
+    } catch (error) { setCategoryBudgetError(error instanceof Error ? error.message : '保存失败') }
+    finally { setCategoryBudgetBusy(false) }
+  }
+  async function deleteCategoryBudget(categoryId: string) {
+    if (categoryBudgetBusy || !window.confirm('确定取消该分类本月预算？不会删除账单。')) return
+    setCategoryBudgetBusy(true); setCategoryBudgetError('')
+    try { await removeCategoryBudget(month, categoryId); setCategoryBudgetEditing(null); setToast('分类预算已取消') }
+    catch { setCategoryBudgetError('取消预算失败') }
+    finally { setCategoryBudgetBusy(false) }
+  }
 
   async function saveBudget(event: React.FormEvent) {
     event.preventDefault()
@@ -633,6 +658,33 @@ export default function App() {
             <div><span>日均可用</span><strong>{isCurrent && remainingDays ? `¥${money(Math.max(0,Math.floor(remaining/remainingDays)))}` : '—'}</strong></div>
           </div>
         })()}
+        <div className="section-heading"><h2>分类预算</h2><span className="meta">按月独立设置</span></div>
+        <section className="category-budget-panel">
+          <p>给餐饮、购物等支出分类设置独立额度。分类预算不会从月度总预算中重复扣除。</p>
+          {categoryList.filter(c => c.type === 'expense').map(category => {
+            const configured = categoryBudgets.find(b => b.categoryId === category.id)
+            const spent = byCategory.find(item => item.id === category.id)?.amount ?? 0
+            const over = configured ? spent > configured.amountMinor : false
+            const editingThis = categoryBudgetEditing === category.id
+            return <div className="category-budget-row" key={category.id}>
+              <div className="category-budget-heading">
+                <strong>{category.name}</strong>
+                <button type="button" disabled={categoryBudgetBusy} onClick={() => {
+                  setCategoryBudgetEditing(editingThis ? null : category.id)
+                  setCategoryBudgetInput(configured ? (configured.amountMinor / 100).toFixed(2) : '')
+                  setCategoryBudgetError('')
+                }}>{editingThis ? '取消' : configured ? '调整' : '设置预算'}</button>
+              </div>
+              <div className="category-budget-totals"><span>已支出 ¥{money(spent)}</span><span>{configured ? `预算 ¥${money(configured.amountMinor)}` : '未设置预算'}</span></div>
+              {configured && <><div className="bar-track"><div className={over ? 'bar-fill over-budget' : 'bar-fill'} style={{width:`${Math.min(100, spent / configured.amountMinor * 100)}%`}}/></div><small className={over ? 'category-budget-over' : ''}>{over ? `已超出 ¥${money(spent - configured.amountMinor)}` : `剩余 ¥${money(configured.amountMinor - spent)}`}</small></>}
+              {editingThis && <form className="category-budget-form" onSubmit={e => void saveCategoryBudgetForm(e)}>
+                <label>预算金额（元）<input inputMode="decimal" autoFocus placeholder="例如 800" value={categoryBudgetInput} onChange={e => setCategoryBudgetInput(e.target.value)} /></label>
+                {categoryBudgetError && <p className="error" role="alert">{categoryBudgetError}</p>}
+                <div><button type="submit" disabled={categoryBudgetBusy || !categoryBudgetInput.trim()}>保存预算</button>{configured && <button type="button" className="category-budget-remove" disabled={categoryBudgetBusy} onClick={() => void deleteCategoryBudget(category.id)}>取消该预算</button>}</div>
+              </form>}
+            </div>
+          })}
+        </section>
         <div className="setting-card budget-editor-card"><h3>{currentBudget ? '调整本月预算' : '设置本月预算'}</h3><p>预算仅作用于 {monthLabel(month)}，不改变已有账单。</p>
           <form className="budget-editor-form" onSubmit={e => void saveBudget(e)}>
             <label htmlFor="budget-input">预算金额（元）</label>

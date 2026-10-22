@@ -427,3 +427,22 @@
 .daily-summary-grid span{font-size:11px;color:#929991;line-height:1.5}
 .daily-summary-grid .daily-compare{grid-column:1/-1}
 .daily-summary-grid .daily-compare strong{font-size:23px}
+
+/* Stage C: category budgets */
+.category-budget-panel{background:#fff;border-radius:16px;padding:16px;margin-bottom:20px}
+.category-budget-panel>p{font-size:12px;line-height:1.7;color:#818b82;margin:0 0 8px}
+.category-budget-row{padding:15px 0;border-bottom:1px solid #eff0ec}
+.category-budget-row:last-child{border-bottom:0}
+.category-budget-heading,.category-budget-totals{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.category-budget-heading strong{font-size:13px}
+.category-budget-heading button{border:0;background:#eaf1e9;color:#527d66;padding:7px 11px;border-radius:9px;font-size:12px}
+.category-budget-totals{font-size:11px;color:#8b938b;margin:9px 0}
+.category-budget-row .bar-track{margin:8px 0}
+.category-budget-row>small{font-size:11px;color:#6f8b76}
+.category-budget-row>small.category-budget-over{color:#b65e54}
+.category-budget-form{margin-top:12px;display:grid;gap:10px}
+.category-budget-form label{display:grid;gap:6px;font-size:12px;color:#7d897f}
+.category-budget-form input{width:100%;min-height:44px;border:1px solid #e5e9df;border-radius:10px;padding:10px;background:#fff}
+.category-budget-form>div{display:flex;gap:9px}
+.category-budget-form button{border:0;border-radius:10px;background:#527d66;color:white;padding:11px 15px;font-size:12px}
+.category-budget-form button.category-budget-remove{background:#f6ebe9;color:#aa6057}
