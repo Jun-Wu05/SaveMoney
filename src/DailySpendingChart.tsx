@@ -5,7 +5,7 @@ export function DailySpendingChart({ summary }: { summary: DailySummary }) {
   const max = Math.max(1, ...summary.points.map(p => p.amountMinor))
   const width = 330, left = 12, chartWidth = 306, base = 122
   const step = chartWidth / summary.points.length
-  return <section className="daily-trend-card">
+  return <section className="daily-trend-card motion-chart">
     <svg viewBox={`0 0 ${width} 157`} role="img" aria-label="每日支出柱状图">
       <line x1={left} x2={left + chartWidth} y1={base} y2={base} stroke="#dce4db" />
       {summary.points.map(p => {
