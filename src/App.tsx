@@ -61,6 +61,9 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
   const [note, setNote] = useState(entry?.note ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [categoryBusy, setCategoryBusy] = useState(false)
   const available = preferredCategories(entries, categories, type)
   const recentCategoryId = lastEntryOfType(entries, type)?.categoryId
   const selected = available.some(c => c.id === categoryId) ? categoryId : (recentCategoryId && available.some(c => c.id === recentCategoryId) ? recentCategoryId : available[0]?.id ?? '')
@@ -92,10 +95,32 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
     catch { setError('删除失败，请重试'); setBusy(false) }
   }
 
+  async function createInlineCategory(event: React.FormEvent) {
+    event.preventDefault()
+    if (categoryBusy) return
+    setCategoryBusy(true)
+    setError('')
+    try {
+      const id = await addCategory(type, newCategoryName)
+      setCategoryId(id)
+      setNewCategoryName('')
+      setCategoryView('list')
+    } catch (e) { setError(e instanceof Error ? e.message : '添加分类失败') }
+    finally { setCategoryBusy(false) }
+  }
+
   return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <section className="editor" role="dialog" aria-modal="true" aria-label={entry ? '编辑账单' : '记一笔'}>
-      <header className="editor-header"><button className="icon-button" onClick={onClose} aria-label="关闭"><X size={22}/></button><strong>{entry ? '编辑账单' : '记一笔'}</strong><span style={{width:40}}/></header>
-      <form onSubmit={submit}>
+      <header className="editor-header"><button type="button" className="icon-button" onClick={categoryView !== 'list' ? () => { setCategoryView('list'); setError('') } : onClose} aria-label={categoryView !== 'list' ? '返回记账' : '关闭'}>{categoryView !== 'list' ? <ChevronLeft size={22}/> : <X size={22}/>}</button><strong>{categoryView === 'manage' ? '管理分类' : categoryView === 'new' ? '新增分类' : entry ? '编辑账单' : '记一笔'}</strong><span style={{width:40}}/></header>
+      {categoryView === 'new' && <form className="inline-category-form" onSubmit={createInlineCategory}>
+        <p>新增{type === 'expense' ? '支出' : '收入'}分类，完成后将自动选中；已填写的金额、日期和备注都会保留。</p>
+        <label htmlFor="new-category-name">分类名称</label>
+        <input id="new-category-name" maxLength={20} autoFocus placeholder="例如：宠物、旅行" value={newCategoryName} onChange={event => setNewCategoryName(event.target.value)}/>
+        {error && <p className="error" role="alert">{error}</p>}
+        <button className="save-button" disabled={!newCategoryName.trim() || categoryBusy} type="submit">{categoryBusy ? '添加中…' : '添加并选中'}</button>
+      </form>}
+      {categoryView === 'manage' && <CategoryManager categories={categories} initialType={type} />}
+      <form hidden={categoryView !== 'list'} onSubmit={submit}>
         <div className="type-toggle"><button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setCategoryId('')}}>支出</button><button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setCategoryId('')}}>收入</button></div>
         <label className="amount-label" htmlFor="amount">金额（人民币）</label>
         <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} onChange={event => setAmount(event.target.value)} autoFocus /></div>
@@ -107,7 +132,8 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
           setError('')
         }}>复制上一笔金额、分类与备注（请核对后保存）</button>}
         <h3 className="section-label">选择分类</h3>
-        <div className="categories">{available.map(c => {const Icon = icons[c.icon] ?? Ellipsis;return <button type="button" key={c.id} onClick={() => setCategoryId(c.id)} className={selected === c.id ? 'category chosen' : 'category'}><Icon size={20}/><span>{c.name}</span></button>})}</div>
+        <div className="categories">{available.map(c => {const Icon = icons[c.icon] ?? Ellipsis;return <button type="button" key={c.id} onClick={() => setCategoryId(c.id)} className={selected === c.id ? 'category chosen' : 'category'}><Icon size={20}/><span>{c.name}</span></button>})}<button type="button" className="category category-add" onClick={() => {setCategoryView('new');setError('')}}><Plus size={20}/><span>新增分类</span></button></div>
+        <button type="button" className="manage-category-link" onClick={() => {setCategoryView('manage');setError('')}}>管理分类 <ChevronRight size={16}/></button>
         <div className="form-fields"><label>日期<input required type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label>备注（可选）<input maxLength={200} placeholder="写点什么…" value={note} onChange={e => setNote(e.target.value)} /></label></div>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="save-button" type="submit" disabled={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
@@ -117,8 +143,8 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
   </div>
 }
 
-function CategoryManager({ categories }: { categories: Category[] }) {
-  const [type, setType] = useState<TransactionType>('expense')
+function CategoryManager({ categories, initialType = 'expense' }: { categories: Category[]; initialType?: TransactionType }) {
+  const [type, setType] = useState<TransactionType>(initialType)
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
