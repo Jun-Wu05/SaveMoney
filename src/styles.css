@@ -416,3 +416,14 @@
 .copy-entry-button{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;border:0;background:#edf3ed;color:#426b51;border-radius:11px;padding:12px;margin-top:14px;font-size:13px;font-weight:650}
 .save-again-button:focus-visible,.copy-entry-button:focus-visible{outline:2px solid #527d66;outline-offset:2px}
 @media(max-width:360px){.editor-footer{gap:7px}.save-again-button{padding:0 10px;font-size:12px}}
+
+/* Stage B: daily spending analysis */
+.daily-trend-card{padding:14px 12px 8px;border-radius:15px;background:#fff}
+.daily-trend-card svg{display:block;width:100%;height:auto}
+.daily-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.daily-summary-grid>div{display:flex;flex-direction:column;gap:7px;min-width:0;background:#fff;border-radius:14px;padding:15px 13px}
+.daily-summary-grid small{font-size:11px;color:#849087}
+.daily-summary-grid strong{font-size:20px;color:#344c3b;font-weight:700;font-variant-numeric:tabular-nums}
+.daily-summary-grid span{font-size:11px;color:#929991;line-height:1.5}
+.daily-summary-grid .daily-compare{grid-column:1/-1}
+.daily-summary-grid .daily-compare strong{font-size:23px}
