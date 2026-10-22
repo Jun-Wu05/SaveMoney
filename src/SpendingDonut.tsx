@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { money } from './money'
 
 export type SpendingSlice = { id: string; name: string; amount: number }
@@ -16,7 +16,6 @@ export function SpendingDonut({ items }: { items: SpendingSlice[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const total = slices.reduce((sum, item) => sum + item.amount, 0)
   const selected = slices.find(item => item.id === selectedId)
-  useEffect(() => { setSelectedId(null) }, [items])
   if (total <= 0) return <div className="empty"><strong>暂无支出数据</strong><span>记账后即可查看分类占比</span></div>
 
   const radius = 76
