@@ -612,3 +612,36 @@
 .calendar-entry-delete:active{background:#fff0eb}
 .calendar-entry-delete:disabled{opacity:.45}
 @media(max-width:360px){.calendar-entry-wrap{gap:2px}.calendar-entry-delete{flex-basis:35px;min-width:35px}}
+
+
+/* Motion V1 A+B: light, predictable interactions; no layout-changing transforms */
+@media (prefers-reduced-motion: no-preference) {
+  .motion-page{animation:sm-page-appear 180ms ease-out both}
+  @keyframes sm-page-appear{from{opacity:.65}to{opacity:1}}
+  .nav-item,.nav-item svg,.add-button,.category,.type-toggle button,.ledger-v3-actions button,.editor-footer-actions button,.settings-v2-menu button,.month-picker button{transition:background-color 160ms ease-out,color 160ms ease-out,transform 120ms ease-out,border-color 160ms ease-out}
+  .nav-item:active svg{transform:scale(.87)}
+  .nav-item.selected svg{animation:sm-nav-settle 170ms ease-out}
+  @keyframes sm-nav-settle{from{transform:scale(.91)}to{transform:scale(1)}}
+  .add-button:active,.editor-footer-actions button:active:not(:disabled),.category:active,.type-toggle button:active,.ledger-v3-actions button:active{transform:scale(.97)}
+  .ledger-v3-panel{transform-origin:top center;animation:sm-filter-expand 180ms ease-out both}
+  @keyframes sm-filter-expand{from{opacity:0;transform:translateY(-5px) scaleY(.98)}to{opacity:1;transform:translateY(0) scaleY(1)}}
+  .motion-sheet{animation:sm-backdrop-in 220ms ease-out both}
+  .motion-sheet>.editor{animation:sm-sheet-in 240ms cubic-bezier(.2,.8,.2,1) both}
+  .motion-sheet-closing{animation:sm-backdrop-out 190ms ease-in both}
+  .motion-sheet-closing>.editor{animation:sm-sheet-out 190ms ease-in both}
+  @keyframes sm-backdrop-in{from{background-color:#181e1b00}to{background-color:#181e1b65}}
+  @keyframes sm-backdrop-out{from{background-color:#181e1b65}to{background-color:#181e1b00}}
+  @keyframes sm-sheet-in{from{transform:translate3d(0,22px,0);opacity:.85}to{transform:translate3d(0,0,0);opacity:1}}
+  @keyframes sm-sheet-out{from{transform:translate3d(0,0,0);opacity:1}to{transform:translate3d(0,22px,0);opacity:.85}}
+  .motion-save-check{animation:sm-check-in 250ms cubic-bezier(.2,.9,.25,1.1) both}
+  @keyframes sm-check-in{from{opacity:0;transform:scale(.78)}to{opacity:1;transform:scale(1)}}
+  .save-toast{animation:sm-toast-in 190ms ease-out both}
+  @keyframes sm-toast-in{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+}
+.motion-save-success{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;background:rgba(247,247,242,.96);color:#426b51;pointer-events:all}
+.motion-save-check{display:grid;place-items:center;width:60px;height:60px;border-radius:50%;background:#dcebdd;color:#527d66;font-size:34px;font-weight:700}
+.motion-save-success strong{font-size:17px;font-weight:700}
+@media(prefers-reduced-motion:reduce){
+  .motion-page,.motion-sheet,.motion-sheet>.editor,.motion-sheet-closing,.motion-sheet-closing>.editor,.ledger-v3-panel,.save-toast,.motion-save-check{animation:none!important;transition:none!important}
+  .nav-item,.nav-item svg,.add-button,.category,.type-toggle button,.ledger-v3-actions button,.editor-footer-actions button{transition:none!important}
+}
