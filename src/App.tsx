@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { BarChart3, BookOpen, Bus, ChevronLeft, ChevronRight, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase } from 'lucide-react'
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
+import { addCategory, renameCategory, deleteUnusedCategory } from './categories'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -100,6 +101,54 @@ function EntryEditor({ categories, entry, onClose }: { categories: Category[]; e
   </div>
 }
 
+function CategoryManager({ categories }: { categories: Category[] }) {
+  const [type, setType] = useState<TransactionType>('expense')
+  const [newName, setNewName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function perform(action: () => Promise<void>, after?: () => void) {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try { await action(); after?.() }
+    catch (e) { setError(e instanceof Error ? e.message : '操作失败，请重试') }
+    finally { setBusy(false) }
+  }
+
+  const shown = categories.filter(c => c.type === type).sort((a,b) => a.sortOrder - b.sortOrder)
+
+  return <div className="setting-card category-manager">
+    <h3>分类管理</h3>
+    <p>可以新增、重命名分类。已经有账单的分类不能直接删除，以免账单丢失。</p>
+    <div className="type-toggle compact-toggle">
+      <button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setEditingId(null);setError('')}}>支出分类</button>
+      <button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setEditingId(null);setError('')}}>收入分类</button>
+    </div>
+    <div className="manage-list">{shown.map(category => <div className="manage-category" key={category.id}>
+      {editingId === category.id ? <>
+        <input aria-label="编辑分类名称" maxLength={20} value={editName} onChange={e => setEditName(e.target.value)}/>
+        <button type="button" disabled={busy} onClick={() => void perform(() => renameCategory(category.id,editName),() => setEditingId(null))}>保存</button>
+        <button type="button" disabled={busy} onClick={() => setEditingId(null)}>取消</button>
+      </> : <>
+        <span>{category.name}</span>
+        <button type="button" disabled={busy} onClick={() => {setEditingId(category.id);setEditName(category.name);setError('')}}>改名</button>
+        <button type="button" disabled={busy} onClick={() => {
+          if (window.confirm(`确定删除「${category.name}」？已有账单的分类无法删除。`))
+            void perform(() => deleteUnusedCategory(category.id))
+        }}>删除</button>
+      </>}
+    </div>)}</div>
+    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(() => addCategory(type,newName),() => setNewName(''))}}>
+      <input aria-label="新分类名称" maxLength={20} placeholder="添加新分类，如 宠物" value={newName} onChange={e => setNewName(e.target.value)}/>
+      <button disabled={busy || !newName.trim()} type="submit">添加</button>
+    </form>
+    {error && <p className="error" role="alert">{error}</p>}
+  </div>
+}
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [month, setMonth] = useState(() => monthString(new Date()))
@@ -176,7 +225,7 @@ export default function App() {
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
         {byCategory.length ? byCategory.map(item => <div className="stat-row" key={item.id}><div className="stat-heading"><strong>{categoryName(categoryList,item.id)}</strong><span>¥ {money(item.amount)} · {expenses ? Math.round(item.amount / expenses * 100) : 0}%</span></div><div className="bar-track"><div className="bar-fill" style={{width:`${expenses ? item.amount/expenses*100 : 0}%`}} /></div></div>) : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
       </>}
-      {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
+      {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><CategoryManager categories={categoryList} /><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；CSV 仅用于表格查看，不能用于完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
