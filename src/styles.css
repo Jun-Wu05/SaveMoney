@@ -322,3 +322,13 @@
 .day-heading>span{font-size:11px;line-height:1.6;font-variant-numeric:tabular-nums;max-width:56%}
 .day-group .entry-row:last-child{border-bottom:0}
 @media(max-width:360px){.day-heading{align-items:flex-start}.day-heading>span{max-width:55%}}
+
+/* SaveMoney 2.0 — calendar selection, current day and income legibility. */
+.calendar-day.is-today:not(.is-selected){background:#f0f4ee}
+.calendar-day.is-today:not(.is-selected) strong{color:#3c7150;font-weight:750}
+.calendar-day.is-today:not(.is-selected)::before{content:'';position:absolute;top:3px;right:4px;width:4px;height:4px;border-radius:50%;background:#527d66}
+.calendar-day small.calendar-income{color:#527d66}
+.calendar-day:focus-visible{outline:2px solid #527d66;outline-offset:2px}
+.calendar-day.is-selected{border-color:#6d9b77;box-shadow:inset 0 0 0 1px #91b099}
+.calendar-detail-title small{line-height:1.6}
+.calendar-entry:focus-visible,.calendar-detail-title button:focus-visible{outline:2px solid #527d66;outline-offset:2px}
