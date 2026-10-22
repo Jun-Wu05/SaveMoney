@@ -177,6 +177,9 @@ export default function App() {
   const [pendingBackup, setPendingBackup] = useState<BackupData | null>(null)
   const [backupStatus, setBackupStatus] = useState('')
   const [backupBusy, setBackupBusy] = useState(false)
+  const [updateReady, setUpdateReady] = useState(false)
+  const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
+  useEffect(() => { const callback = () => setUpdateReady(true); window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
   const currentBudget = useLiveQuery(() => db.budgets.get(month), [month])
@@ -249,7 +252,7 @@ export default function App() {
     setBackupBusy(true)
     setBackupStatus('')
     try {
-      if (kind === 'json') await downloadBackup()
+      if (kind === 'json') { await downloadBackup(); const at = new Date().toISOString(); localStorage.setItem('savemoney-last-backup-created', at); setLastBackup(at) }
       else await downloadCsv()
       setBackupStatus('文件已生成。请确认已保存到 iPhone「文件」App 或 iCloud Drive。')
     } catch { setBackupStatus('导出失败，请检查浏览器权限或设备空间') }
@@ -258,6 +261,7 @@ export default function App() {
 
   return <div className="app-shell">
     <header className="app-header"><div className="brand">SaveMoney<span className="brand-dot">.</span></div><span className="brand-caption">花了多少，心里有数</span></header>
+    {updateReady && !editing && !backupBusy && !pendingBackup && <div className="app-update-banner" role="status"><span>发现新版本。请确认当前账单已保存后更新。</span><button onClick={() => window.dispatchEvent(new Event('savemoney-approve-update'))}>立即更新</button></div>}
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     <main className="content">
       {<div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
@@ -309,7 +313,7 @@ export default function App() {
           <button type="submit" disabled={budgetBusy || !budgetInput.trim()}>{currentBudget ? '更新预算' : '设置预算'}</button>
         </form>
         {budgetError && <p className="error" role="alert">{budgetError}</p>}
-      </div><CategoryManager categories={categoryList} /><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
+      </div><CategoryManager categories={categoryList} /><div className="setting-card"><h3>备份提醒</h3><p>{lastBackup ? `上次生成 JSON 备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}。请确认文件已保存到 iCloud Drive 或「文件」App。` : '尚未记录生成过 JSON 备份。建议现在导出并保存一份。'} 建议至少每周备份一次。本提示不代表文件已经成功保存。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；CSV 仅用于表格查看，不能用于完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
