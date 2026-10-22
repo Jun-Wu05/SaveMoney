@@ -564,7 +564,7 @@ export default function App() {
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
-      {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
+      {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
       {!budgetOpen && tab === 'home' && <>
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
         <div className="section-heading home-section-heading"><h2>消费都花在哪了</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
