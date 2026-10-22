@@ -683,3 +683,6 @@
   .daily-trend-card.motion-chart svg rect,.motion-trend-line,.motion-trend-point circle,.motion-ranking .stats-v2-track i{animation:none!important}
   .budget-track .bar-fill,.category-budget-row .bar-fill{transition:none!important}
 }
+
+/* Hide repeated daily spending labels visually; retain chart data for assistive technology. */
+.motion-daily-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
