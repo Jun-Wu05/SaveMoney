@@ -449,8 +449,6 @@ export default function App() {
   const dailySummary = useMemo(() => dailySpendingSummary(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
   const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>(!drilldownIds || drilldownIds.includes(e.categoryId)) && (!ledgerCategory || e.categoryId === ledgerCategory) && (!ledgerDate || e.date === ledgerDate)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds,ledgerCategory,ledgerDate])
-  const ledgerExpense = sumMinor(filteredEntries, 'expense')
-  const ledgerIncome = sumMinor(filteredEntries, 'income')
   const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterType !== 'all' || allMonths || ledgerDate || ledgerCategory)
   const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterType('all'); setAllMonths(false); setLedgerDate(''); setLedgerCategory(''); setCalendarDate(null) }
   const jumpToLedgerDate = (date: string) => { setLedgerDate(date); if (date) { setMonth(date.slice(0,7)); setAllMonths(false); setCalendarDate(date) } else setCalendarDate(null) }
