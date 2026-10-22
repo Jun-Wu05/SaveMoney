@@ -35,3 +35,5 @@
 .insight-card p{font-size:13px;line-height:1.75;margin:8px 0;padding-left:10px;border-left:2px solid #86a38d}
 
 .day-group{margin:6px 0 22px}.day-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #dce4db}.day-heading strong{font-size:13px}.day-heading span{font-size:11px;color:#788479;text-align:right}
+
+.ledger-tools input{width:100%;background:#fff;border:1px solid #dfe5dd;border-radius:13px;padding:13px;color:#202522}.ledger-filters{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 20px}.ledger-filters button{border:0;background:#e9ede6;color:#627269;padding:8px 11px;border-radius:18px;font-size:12px}.ledger-filters button.active{background:#527d66;color:white}
