@@ -9,6 +9,7 @@ import { SpendingDonut } from './SpendingDonut'
 import { monthlyExpenseTrend, spendingInsights } from './insights'
 import { SpendingTrend } from './SpendingTrend'
 import { groupEntriesByDay } from './dailyGroups'
+import { calculateMonthlyReview, reviewSentence } from './monthlyReview'
 import { filterEntries } from './ledgerFilters'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
@@ -193,6 +194,7 @@ export default function App() {
     for (const e of monthEntries.filter(e => e.type === 'expense')) map.set(e.categoryId, (map.get(e.categoryId) ?? 0) + e.amountMinor)
     return Array.from(map, ([id, amount]) => ({ id, amount })).sort((a,b) => b.amount - a.amount)
   }, [monthEntries])
+  const review = useMemo(() => calculateMonthlyReview(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries,categoryList,month,currentBudget?.amountMinor])
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
   const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>!drilldownIds || drilldownIds.includes(e.categoryId)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds])
@@ -290,6 +292,12 @@ export default function App() {
         {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} onOpenCategory={ids => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setTab('list') }} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
         <div className="section-heading"><h2>近 6 个月支出趋势</h2><span className="meta">截至所选月份</span></div>
         <SpendingTrend points={trend} />
+        <div className="section-heading"><h2>月度回顾</h2><span className="meta">{monthLabel(month)}</span></div>
+        <section className="review-card">
+          <div className="review-metrics"><div><small>本月支出</small><strong>¥{money(review.expenseMinor)}</strong></div><div><small>本月收入</small><strong>¥{money(review.incomeMinor)}</strong></div><div><small>记账天数</small><strong>{review.days} 天</strong></div><div><small>最多支出类别</small><strong>{review.topCategory ?? '暂无'}</strong></div></div>
+          {review.budgetRemainingMinor !== null && <p>预算{review.budgetRemainingMinor >= 0?'剩余':'超出'} ¥{money(Math.abs(review.budgetRemainingMinor))}</p>}
+          <p>{reviewSentence(review)}</p>
+        </section>
         <div className="section-heading"><h2>消费洞察</h2><span className="meta">本地分析 · 无 AI 费用</span></div>
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
       </>}
