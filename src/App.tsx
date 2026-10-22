@@ -167,6 +167,7 @@ function CategoryManager({ categories }: { categories: Category[] }) {
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [searchTerm, setSearchTerm] = useState('')
+  const [drilldownIds, setDrilldownIds] = useState<string[] | null>(null)
   const [filterType, setFilterType] = useState<TransactionType | 'all'>('all')
   const [allMonths, setAllMonths] = useState(false)
   const [month, setMonth] = useState(() => monthString(new Date()))
@@ -194,7 +195,7 @@ export default function App() {
   }, [monthEntries])
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
-  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}), [entries,categoryList,searchTerm,filterType,allMonths,month])
+  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>!drilldownIds || drilldownIds.includes(e.categoryId)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds])
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new') => setEditing(entry)
 
@@ -270,6 +271,7 @@ export default function App() {
       </>}
       {tab === 'list' && <>
         <div className="section-heading"><h2>账单明细</h2><span className="meta">{filteredEntries.length} 笔</span></div>
+        {drilldownIds && <div className="filter-notice"><span>正在查看选中的消费分类</span><button onClick={()=>setDrilldownIds(null)}>清除分类筛选</button></div>}
         <div className="ledger-tools">
           <input aria-label="搜索账单" placeholder="搜索备注或分类…" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
           <div className="ledger-filters">
@@ -285,7 +287,7 @@ export default function App() {
       {tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
-        {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
+        {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} onOpenCategory={ids => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setTab('list') }} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
         <div className="section-heading"><h2>近 6 个月支出趋势</h2><span className="meta">截至所选月份</span></div>
         <SpendingTrend points={trend} />
         <div className="section-heading"><h2>消费洞察</h2><span className="meta">本地分析 · 无 AI 费用</span></div>
