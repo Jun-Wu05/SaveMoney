@@ -577,7 +577,7 @@ export default function App() {
 
         <div className="section-heading home-section-heading"><h2>消费结构</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
         {byCategory.length ? <>
-          <div className="home-v2-top3" aria-label="消费最多的三个分类">{byCategory.slice(0,3).map((item,index)=><button key={item.id} type="button" onClick={()=>openCategoryBills(item.id)}><span className="home-v2-rank">{index+1}</span><span className="home-v2-category">{categoryName(categoryList,item.id)}</span><strong>¥{money(item.amount)}</strong><small>{expenses>0?Math.round(item.amount/expenses*100):0}%</small></button>)}</div>
+          <div className="home-v2-top3" aria-label="消费最多的三个分类">{byCategory.slice(0,3).map((item,index)=><button key={item.id} type="button" onClick={()=>openCategoryBills([item.id])}><span className="home-v2-rank">{index+1}</span><span className="home-v2-category">{categoryName(categoryList,item.id)}</span><strong>¥{money(item.amount)}</strong><small>{expenses>0?Math.round(item.amount/expenses*100):0}%</small></button>)}</div>
           <SpendingDonut compact key={month} items={byCategory.map(item => ({ id:item.id, name:categoryName(categoryList,item.id), amount:item.amount }))} onOpenCategory={openCategoryBills}/>
         </> : <div className="empty home-chart-empty"><BarChart3 size={25}/><strong>还没有支出记录</strong><span>记一笔账，看看钱都花在哪里</span></div>}
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => goToTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
