@@ -426,6 +426,8 @@ export default function App() {
   useEffect(() => { if (!toast) return; const timeout = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(timeout) }, [toast])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
   const currentBudget = useLiveQuery(() => db.budgets.get(month), [month])
+  const budgetCount = useLiveQuery(() => db.budgets.count(), [], 0)
+  const categoryBudgetCount = useLiveQuery(() => db.categoryBudgets.count(), [], 0)
   const categoryBudgets = useLiveQuery(() => db.categoryBudgets.where('month').equals(month).toArray(), [month], [])
   const [categoryBudgetEditing, setCategoryBudgetEditing] = useState<string | null>(null)
   const [categoryBudgetInput, setCategoryBudgetInput] = useState('')
@@ -681,7 +683,7 @@ export default function App() {
           <strong>恢复预览</strong>
           <p>备份时间：{new Date(pendingBackup.exportedAt).toLocaleString('zh-CN')}</p>
           <div className="backup-v2-compare"><div><small>当前账本</small><strong>{(entries ?? []).length} 笔</strong><span>{categoryList.length} 个分类</span></div><div><small>将恢复的备份</small><strong>{pendingBackup.entries.length} 笔</strong><span>{pendingBackup.categories.length} 个分类</span></div></div>
-          <p>月度预算：当前 {budgets?.length ?? 0} 项 → 备份 {pendingBackup.budgets?.length ?? 0} 项；分类预算：当前 {allCategoryBudgets?.length ?? 0} 项 → 备份 {pendingBackup.categoryBudgets?.length ?? 0} 项。</p>
+          <p>月度预算：当前 {budgetCount} 项 → 备份 {pendingBackup.budgets?.length ?? 0} 项；分类预算：当前 {categoryBudgetCount} 项 → 备份 {pendingBackup.categoryBudgets?.length ?? 0} 项。</p>
           <p className="backup-v2-warning">⚠️ 恢复将完全覆盖当前数据，不会自动合并。请先导出当前 JSON 备份。</p>
           <button className="restore-button" disabled={backupBusy} onClick={() => void confirmRestore()}>确认覆盖并恢复</button>
           <button className="cancel-restore" disabled={backupBusy} onClick={() => setPendingBackup(null)}>取消</button>
