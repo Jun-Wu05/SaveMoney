@@ -359,3 +359,10 @@
 .swipe-delete:focus-visible{outline:2px solid #813b35;outline-offset:-3px}
 .swipe-delete:disabled{opacity:.55}
 @media(prefers-reduced-motion:reduce){.swipe-entry-content{transition:none}}
+
+/* Refined swipe action: soft destructive accent, compact action and spring-like settling. */
+.swipe-entry{border-radius:12px;background:transparent;touch-action:pan-y}
+.swipe-entry-content{border-radius:12px;will-change:transform;transition:transform 240ms cubic-bezier(.2,.8,.2,1);touch-action:pan-y}
+.swipe-entry.is-dragging .swipe-entry-content{transition:none}
+.swipe-delete{right:3px;top:5px;bottom:5px;width:60px;border-radius:11px;background:#c76b65;font-size:10px;gap:3px}
+@media(prefers-reduced-motion:reduce){.swipe-entry-content{transition:none}}
