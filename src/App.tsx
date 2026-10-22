@@ -10,6 +10,7 @@ import { monthlyExpenseTrend, spendingInsights } from './insights'
 import { SpendingTrend } from './SpendingTrend'
 import { groupEntriesByDay } from './dailyGroups'
 import { filterEntries } from './ledgerFilters'
+import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -51,7 +52,7 @@ function EntryRow({ entry, categories, onEdit }: { entry: Entry; categories: Cat
   </button>
 }
 
-function EntryEditor({ categories, entry, onClose }: { categories: Category[]; entry: Entry | null; onClose: () => void }) {
+function EntryEditor({ categories, entries, entry, onClose }: { categories: Category[]; entries: Entry[]; entry: Entry | null; onClose: () => void }) {
   const [type, setType] = useState<TransactionType>(entry?.type ?? 'expense')
   const [amount, setAmount] = useState(entry ? (entry.amountMinor / 100).toFixed(2) : '')
   const [categoryId, setCategoryId] = useState(entry?.categoryId ?? '')
@@ -59,8 +60,9 @@ function EntryEditor({ categories, entry, onClose }: { categories: Category[]; e
   const [note, setNote] = useState(entry?.note ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const available = categories.filter(c => c.type === type).sort((a, b) => a.sortOrder - b.sortOrder)
-  const selected = available.some(c => c.id === categoryId) ? categoryId : available[0]?.id ?? ''
+  const available = preferredCategories(entries, categories, type)
+  const recentCategoryId = lastEntryOfType(entries, type)?.categoryId
+  const selected = available.some(c => c.id === categoryId) ? categoryId : (recentCategoryId && available.some(c => c.id === recentCategoryId) ? recentCategoryId : available[0]?.id ?? '')
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -96,6 +98,13 @@ function EntryEditor({ categories, entry, onClose }: { categories: Category[]; e
         <div className="type-toggle"><button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setCategoryId('')}}>支出</button><button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setCategoryId('')}}>收入</button></div>
         <label className="amount-label" htmlFor="amount">金额（人民币）</label>
         <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} onChange={event => setAmount(event.target.value)} autoFocus /></div>
+        {!entry && lastEntryOfType(entries, type) && <button type="button" className="copy-last" onClick={() => {
+          const previous = lastEntryOfType(entries, type)!
+          setAmount((previous.amountMinor / 100).toFixed(2))
+          setCategoryId(previous.categoryId)
+          setNote(previous.note)
+          setError('')
+        }}>复制上一笔金额、分类与备注（请核对后保存）</button>}
         <h3 className="section-label">选择分类</h3>
         <div className="categories">{available.map(c => {const Icon = icons[c.icon] ?? Ellipsis;return <button type="button" key={c.id} onClick={() => setCategoryId(c.id)} className={selected === c.id ? 'category chosen' : 'category'}><Icon size={20}/><span>{c.name}</span></button>})}</div>
         <div className="form-fields"><label>日期<input required type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label>备注（可选）<input maxLength={200} placeholder="写点什么…" value={note} onChange={e => setNote(e.target.value)} /></label></div>
@@ -316,6 +325,6 @@ export default function App() {
       <button className="add-button" aria-label="记一笔" onClick={() => openEditor('new')}><Plus size={25}/></button>
       {nav.slice(2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => setTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
     </nav>
-    {editing && <EntryEditor key={editing === 'new' ? 'new' : editing.id} categories={categoryList} entry={editing === 'new' ? null : editing} onClose={() => setEditing(null)}/>}
+    {editing && <EntryEditor key={editing === 'new' ? 'new' : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} onClose={() => setEditing(null)}/>}
   </div>
 }
