@@ -17,6 +17,7 @@ import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 import { downloadExcel } from './excelExport'
 import { parseSaveMoneyCsv, type CsvImportPreview } from './csvImport'
+import { parseSaveMoneyExcel } from './excelImport'
 import { importCsvBills, previewImport } from './importBills'
 import { ExpenseCalendar } from './ExpenseCalendar'
 import { pressAmountKey, type AmountKey } from './amountKeypad'
@@ -381,9 +382,9 @@ export default function App() {
   async function chooseCsv(file?: File) {
     setPendingCsv(null); setCsvStatus('')
     if (!file) return
-    if (file.size > 20_000_000) { setCsvStatus('CSV 文件过大'); return }
-    try { setPendingCsv(parseSaveMoneyCsv(await file.text())) }
-    catch (error) { setCsvStatus(error instanceof Error ? error.message : 'CSV 解析失败') }
+    if (file.size > 20_000_000) { setCsvStatus('文件过大，请选择不超过 20 MB 的账单'); return }
+    try { setPendingCsv(/\.xlsx$/i.test(file.name) ? await parseSaveMoneyExcel(file) : parseSaveMoneyCsv(await file.text())) }
+    catch (error) { setCsvStatus(error instanceof Error ? error.message : '账单解析失败') }
   }
 
   async function confirmCsvImport() {
@@ -472,15 +473,15 @@ export default function App() {
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
       </>}
       {!budgetOpen && tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card"><h3>关于记账功能</h3><p>新增与管理分类请在「记一笔」中操作；预算可以从首页查看和修改。</p></div><div className="setting-card"><h3>备份提醒</h3><p>{lastBackup ? `上次生成 JSON 备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}。请确认文件已保存到 iCloud Drive 或「文件」App。` : '尚未记录生成过 JSON 备份。建议现在导出并保存一份。'} 建议至少每周备份一次。本提示不代表文件已经成功保存。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
-      <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；Excel 按月份分 Sheet 并包含汇总，CSV 包含全量账单及总计；仅 JSON 可完整恢复。</p>
+      <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；Excel 按月份分 Sheet 并包含汇总，CSV 包含全量账单及总计；CSV / Excel 可追加恢复账单，只有 JSON 可完整恢复分类和预算。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
           <button disabled={backupBusy} onClick={() => exportData('xlsx')}>导出 Excel（月度分表）</button>
           <button disabled={backupBusy} onClick={() => exportData('csv')}>导出 CSV 账单</button>
         </div>
       </div>
-      <div className="setting-card"><h3>导入 CSV 账单</h3><p>支持 SaveMoney 导出的 CSV 文件。只追加新账单，不覆盖现有账本；相同日期、类型、金额、分类和备注的记录视为重复。</p>
-        <label className="file-label">选择 CSV 账单<input type="file" accept=".csv,text/csv" disabled={backupBusy} onChange={e=>{void chooseCsv(e.target.files?.[0]);e.target.value=''}} /></label>
+      <div className="setting-card"><h3>导入 CSV / Excel 账单</h3><p>支持 SaveMoney 导出的 CSV 或 Excel 月度账单。只追加新账单，不覆盖现有账本；相同日期、类型、金额、分类和备注的记录视为重复。</p>
+        <label className="file-label">选择 CSV / Excel 文件<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={backupBusy} onChange={e=>{void chooseCsv(e.target.files?.[0]);e.target.value=''}} /></label>
         {pendingCsv && <div className="restore-preview">
           <strong>导入预览</strong>
           <p>有效 {pendingCsv.rows.length} 笔 · 异常 {pendingCsv.errors.length} 行</p>
