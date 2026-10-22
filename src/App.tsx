@@ -4,6 +4,7 @@ import { BarChart3, BookOpen, Bus, ChevronLeft, ChevronRight, Ellipsis, Film, Gi
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
 import { addCategory, renameCategory, deleteUnusedCategory } from './categories'
+import { budgetProgress, removeMonthlyBudget, setMonthlyBudget } from './budget'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -159,6 +160,11 @@ export default function App() {
   const [backupBusy, setBackupBusy] = useState(false)
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
+  const currentBudget = useLiveQuery(() => db.budgets.get(month), [month])
+  const [budgetInput, setBudgetInput] = useState('')
+  const [budgetError, setBudgetError] = useState('')
+  const [budgetBusy, setBudgetBusy] = useState(false)
+  useEffect(() => { setBudgetInput(''); setBudgetError('') }, [month])
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const categoryList = useMemo(() => categories ?? [], [categories])
   const monthEntries = useMemo(() => (entries ?? []).filter(entry => entry.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)), [entries, month])
@@ -171,6 +177,24 @@ export default function App() {
   }, [monthEntries])
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new') => setEditing(entry)
+
+  async function saveBudget(event: React.FormEvent) {
+    event.preventDefault()
+    if (budgetBusy) return
+    setBudgetBusy(true)
+    setBudgetError('')
+    try { await setMonthlyBudget(month, budgetInput); setBudgetInput('') }
+    catch (error) { setBudgetError(error instanceof Error ? error.message : '预算保存失败') }
+    finally { setBudgetBusy(false) }
+  }
+
+  async function clearBudget() {
+    if (budgetBusy || !window.confirm(`确定取消 ${monthLabel(month)} 的预算？不会删除账单。`)) return
+    setBudgetBusy(true)
+    try { await removeMonthlyBudget(month) }
+    catch { setBudgetError('取消预算失败') }
+    finally { setBudgetBusy(false) }
+  }
 
   async function chooseBackup(file?: File) {
     if (!file) return
@@ -213,9 +237,14 @@ export default function App() {
     <header className="app-header"><div className="brand">SaveMoney<span className="brand-dot">.</span></div><span className="brand-caption">花了多少，心里有数</span></header>
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     <main className="content">
-      {tab !== 'settings' && <div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
+      {<div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
       {tab === 'home' && <>
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
+        {currentBudget && <section className="budget-card" aria-label="月度预算">
+          <div className="budget-heading"><span>本月预算</span><strong>¥ {money(currentBudget.amountMinor)}</strong></div>
+          <div className="bar-track budget-track"><div className={expenses > currentBudget.amountMinor ? 'bar-fill over-budget' : 'bar-fill'} style={{width:`${Math.min(100, expenses/currentBudget.amountMinor*100)}%`}}/></div>
+          <div className="budget-footer"><span>已使用 {budgetProgress(expenses,currentBudget.amountMinor).percent}%</span><strong className={expenses > currentBudget.amountMinor ? 'over-text' : ''}>{expenses > currentBudget.amountMinor ? '超出' : '剩余'} ¥ {money(Math.abs(currentBudget.amountMinor - expenses))}</strong></div>
+        </section>}
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => setTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} />) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </>}
@@ -225,7 +254,15 @@ export default function App() {
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
         {byCategory.length ? byCategory.map(item => <div className="stat-row" key={item.id}><div className="stat-heading"><strong>{categoryName(categoryList,item.id)}</strong><span>¥ {money(item.amount)} · {expenses ? Math.round(item.amount / expenses * 100) : 0}%</span></div><div className="bar-track"><div className="bar-fill" style={{width:`${expenses ? item.amount/expenses*100 : 0}%`}} /></div></div>) : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
       </>}
-      {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><CategoryManager categories={categoryList} /><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
+      {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card budget-settings"><h3>{monthLabel(month)} · 月度预算</h3>
+        <p>预算只针对当前选择的月份，不会修改任何历史账单。可在首页切换月份查看和调整。</p>
+        {currentBudget && <div className="current-budget">当前预算：¥ {money(currentBudget.amountMinor)} <button type="button" disabled={budgetBusy} onClick={() => void clearBudget()}>取消</button></div>}
+        <form className="manage-add" onSubmit={e => void saveBudget(e)}>
+          <input inputMode="decimal" aria-label="月度预算金额" placeholder="输入预算金额（元）" value={budgetInput} onChange={e=>setBudgetInput(e.target.value)} />
+          <button type="submit" disabled={budgetBusy || !budgetInput.trim()}>{currentBudget ? '更新预算' : '设置预算'}</button>
+        </form>
+        {budgetError && <p className="error" role="alert">{budgetError}</p>}
+      </div><CategoryManager categories={categoryList} /><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；CSV 仅用于表格查看，不能用于完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
