@@ -639,7 +639,7 @@ export default function App() {
           </div>
         </section>
         <div className="section-heading"><h2>每日消费趋势</h2><span className="meta">前 {dailySummary.comparedDays} 天 · 对比上月同期</span></div>
-        <DailySpendingChart summary={dailySummary} />
+        <DailySpendingChart key={month} summary={dailySummary} />
         <div className="stats-v2-compare">本期 ¥{money(dailySummary.totalMinor)} <span>上期 ¥{money(dailySummary.previousMinor)}</span></div>
         <div className="section-heading"><h2>分类消费排行</h2><span className="meta">点击分类查看账单</span></div>
         {byCategory.length ? <div className="stats-v2-ranking motion-ranking">{byCategory.map((item,index)=><button type="button" key={item.id} onClick={()=>openCategoryBills([item.id])}><span className="stats-v2-rank">{index+1}</span><span className="stats-v2-rank-main"><span className="stats-v2-rank-title"><strong>{categoryName(categoryList,item.id)}</strong><b>¥{money(item.amount)}</b></span><span className="stats-v2-track"><i style={{width:`${expenses>0?item.amount/expenses*100:0}%`}}/></span></span><span className="stats-v2-share">{expenses>0?(item.amount/expenses*100).toFixed(1):'0.0'}%</span><ChevronRight size={14}/></button>)}</div> : <div className="empty"><BarChart3 size={26}/><strong>暂无支出数据</strong><span>记账后即可查看分类排行</span></div>}

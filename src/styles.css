@@ -686,3 +686,18 @@
 
 /* Hide repeated daily spending labels visually; retain chart data for assistive technology. */
 .motion-daily-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+
+/* Daily chart: one compact selected-day readout, with full-width touch targets */
+.daily-chart-readout{display:flex;align-items:center;justify-content:center;gap:9px;min-height:30px;color:#809084;font-size:11px}
+.daily-chart-readout strong{color:#365e47;font-size:12px}
+.daily-chart-readout span{font-variant-numeric:tabular-nums}
+.daily-chart-day{cursor:pointer;outline:none;touch-action:manipulation}
+.daily-chart-day:focus-visible .daily-chart-hit{stroke:#527d66;stroke-width:1.5;stroke-dasharray:2 2}
+.daily-chart-day.is-selected .daily-chart-bar{stroke:#365e47;stroke-width:1}
+@media(prefers-reduced-motion:no-preference){
+  .daily-chart-day .daily-chart-bar{transition:fill 140ms ease-out,stroke 140ms ease-out}
+  .daily-chart-readout{animation:sm-daily-readout 160ms ease-out both}
+  @keyframes sm-daily-readout{from{opacity:.7}to{opacity:1}}
+}
+@media(prefers-reduced-motion:reduce){.daily-chart-day .daily-chart-bar,.daily-chart-readout{animation:none!important;transition:none!important}}
