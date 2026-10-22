@@ -33,3 +33,5 @@
 .trend-accessible{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;color:#818b81;font-size:11px;text-align:center;margin-top:8px}
 .insight-card{background:#e8efe8;border-radius:18px;padding:14px 18px;color:#3d5645}
 .insight-card p{font-size:13px;line-height:1.75;margin:8px 0;padding-left:10px;border-left:2px solid #86a38d}
+
+.day-group{margin:6px 0 22px}.day-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #dce4db}.day-heading strong{font-size:13px}.day-heading span{font-size:11px;color:#788479;text-align:right}
