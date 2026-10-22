@@ -20,9 +20,10 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       .catch(() => { userApprovedRefresh = false })
   })
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL, updateViaCache: 'none' })
       .then(registration => {
         if (registration.waiting) announceUpdate()
+        void registration.update()
         registration.addEventListener('updatefound', () => {
           const worker = registration.installing
           worker?.addEventListener('statechange', () => {
