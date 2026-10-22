@@ -210,12 +210,20 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
       overlay.style.height = `${viewport?.height ?? window.innerHeight}px`
       overlay.style.top = `${viewport?.offsetTop ?? 0}px`
     }
+    // Keep focused date/note fields visible when the iOS software keyboard opens.
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target
+      if (!(target instanceof HTMLElement) || !target.closest('.editor-scroller')) return
+      window.setTimeout(() => target.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 220)
+    }
+    overlay?.addEventListener('focusin', onFocusIn)
     syncViewport()
     viewport?.addEventListener('resize', syncViewport)
     viewport?.addEventListener('scroll', syncViewport)
     return () => {
       overlay?.removeEventListener('touchstart', onTouchStart)
       overlay?.removeEventListener('touchmove', onTouchMove)
+      overlay?.removeEventListener('focusin', onFocusIn)
       viewport?.removeEventListener('resize', syncViewport)
       viewport?.removeEventListener('scroll', syncViewport)
       body.style.position = originalBody.position
@@ -316,8 +324,9 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
         {entry && <button className="delete-button" type="button" disabled={busy} onClick={remove}><Trash2 size={16}/> 删除这笔记录</button>}
       </form>
       {categoryView === 'list' && <footer className="editor-footer">
+        {error && <p className="editor-footer-error" role="alert">{error}</p>}
         {!entry && <button className="save-again-button" type="submit" form="entry-editor-form" data-action="again" disabled={busy}>保存并继续</button>}
-        <button className="save-button" type="submit" form="entry-editor-form" disabled={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
+        <button className="save-button" type="submit" form="entry-editor-form" disabled={busy} aria-busy={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
       </footer>}
     </section>
   </div>, document.body)
