@@ -63,14 +63,40 @@ function adjustMonth(month: string, delta: number) {
   return monthString(new Date(year, m - 1 + delta, 1))
 }
 
-function EntryRow({ entry, categories, onEdit }: { entry: Entry; categories: Category[]; onEdit: (entry: Entry) => void }) {
+function EntryRow({ entry, categories, onEdit, onDeleted }: { entry: Entry; categories: Category[]; onEdit: (entry: Entry) => void; onDeleted?: () => void }) {
   const category = categories.find(c => c.id === entry.categoryId)
   const Icon = icons[category?.icon ?? 'ellipsis'] ?? Ellipsis
-  return <button className="entry-row" onClick={() => onEdit(entry)} aria-label={`编辑${categoryName(categories, entry.categoryId)}`}>
-    <span className="entry-icon"><Icon size={18} /></span>
-    <span className="entry-info"><strong>{categoryName(categories, entry.categoryId)}</strong><small>{entry.date}{entry.note ? ` · ${entry.note}` : ''}</small></span>
-    <span className={entry.type === 'income' ? 'amount income' : 'amount'}>{entry.type === 'income' ? '+' : '−'} ¥{money(entry.amountMinor)}</span>
-  </button>
+  const [revealed, setRevealed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const touchStart = useRef<{x:number;y:number}|null>(null)
+  const gestureConsumed = useRef(false)
+
+  async function deleteEntry() {
+    if (busy) return
+    if (!window.confirm(`确定删除「${categoryName(categories,entry.categoryId)}」¥${money(entry.amountMinor)} 这笔账单吗？此操作无法撤销。`)) return
+    setBusy(true)
+    try { await removeEntry(entry.id); onDeleted?.() }
+    catch { window.alert('删除失败，请重试') }
+    finally { setBusy(false) }
+  }
+  return <div className={revealed ? 'swipe-entry is-revealed' : 'swipe-entry'}
+    onTouchStart={e => {const t=e.touches[0];touchStart.current={x:t.clientX,y:t.clientY};gestureConsumed.current=false}}
+    onTouchEnd={e => {
+      if(!touchStart.current)return
+      const t=e.changedTouches[0],dx=t.clientX-touchStart.current.x,dy=t.clientY-touchStart.current.y
+      touchStart.current=null
+      if(Math.abs(dx)<48||Math.abs(dx)<Math.abs(dy)*1.35)return
+      gestureConsumed.current=true
+      setRevealed(dx<0)
+    }}
+    onTouchCancel={()=>{touchStart.current=null}}>
+    <button type="button" className="swipe-delete" aria-label={`删除${categoryName(categories,entry.categoryId)}账单`} disabled={busy} onClick={()=>void deleteEntry()}><Trash2 size={18}/><span>删除</span></button>
+    <button type="button" className="entry-row swipe-entry-content" onClick={() => {if(gestureConsumed.current){gestureConsumed.current=false;return}if(revealed){setRevealed(false);return}onEdit(entry)}} aria-label={`编辑${categoryName(categories, entry.categoryId)}`}>
+      <span className="entry-icon"><Icon size={18} /></span>
+      <span className="entry-info"><strong>{categoryName(categories, entry.categoryId)}</strong><small>{entry.date}{entry.note ? ` · ${entry.note}` : ''}</small></span>
+      <span className={entry.type === 'income' ? 'amount income' : 'amount'}>{entry.type === 'income' ? '+' : '−'} ¥{money(entry.amountMinor)}</span>
+    </button>
+  </div>
 }
 
 function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved, onDeleted }: { categories: Category[]; entries: Entry[]; entry: Entry | null; initialDate?: string; onClose: () => void; onSaved: (message: string) => void; onDeleted: () => void }) {
@@ -450,7 +476,7 @@ export default function App() {
           </> : <div className="budget-heading"><span>还没有设置本月预算</span><strong>设置预算 <ChevronRight size={15}/></strong></div>}
         </button>
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => goToTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
-        {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} />) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
+        {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </>}
       {!budgetOpen && tab === 'list' && <>
         <div className="section-heading"><h2>账单明细</h2><span className="meta">{filteredEntries.length} 笔</span></div>
@@ -473,7 +499,7 @@ export default function App() {
           <div><span>{ledgerHasFilters ? '筛选结果' : '账单汇总'} · {filteredEntries.length} 笔</span><strong>支出 ¥{money(ledgerExpense)} <em>收入 ¥{money(ledgerIncome)}</em></strong></div>
           {ledgerHasFilters && <button type="button" onClick={clearLedgerFilters}>清除筛选</button>}
         </div>
-        {ledgerView==='calendar' ? <><ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={setCalendarDate} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor}/>{filteredEntries.length===0 && <p className="calendar-filter-empty" role="status">当前条件下没有账单，可更换月份或清除筛选。</p>}</> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><div className="day-date"><strong>{day.date}</strong><small>{day.entries.length} 笔</small></div><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
+        {ledgerView==='calendar' ? <><ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={setCalendarDate} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor}/>{filteredEntries.length===0 && <p className="calendar-filter-empty" role="status">当前条件下没有账单，可更换月份或清除筛选。</p>}</> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><div className="day-date"><strong>{day.date}</strong><small>{day.entries.length} 笔</small></div><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
       </>}
       {!budgetOpen && tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
