@@ -16,6 +16,8 @@ import { filterEntries } from './ledgerFilters'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 import { downloadExcel } from './excelExport'
+import { parseSaveMoneyCsv, type CsvImportPreview } from './csvImport'
+import { importCsvBills, previewImport } from './importBills'
 import { ExpenseCalendar } from './ExpenseCalendar'
 import { pressAmountKey, type AmountKey } from './amountKeypad'
 
@@ -291,6 +293,8 @@ export default function App() {
   const [initError, setInitError] = useState(false)
   const [pendingBackup, setPendingBackup] = useState<BackupData | null>(null)
   const [backupStatus, setBackupStatus] = useState('')
+  const [pendingCsv, setPendingCsv] = useState<CsvImportPreview | null>(null)
+  const [csvStatus, setCsvStatus] = useState('')
   const [backupBusy, setBackupBusy] = useState(false)
   const [updateReady, setUpdateReady] = useState(false)
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
@@ -374,6 +378,26 @@ export default function App() {
     } finally { setBackupBusy(false) }
   }
 
+  async function chooseCsv(file?: File) {
+    setPendingCsv(null); setCsvStatus('')
+    if (!file) return
+    if (file.size > 20_000_000) { setCsvStatus('CSV 文件过大'); return }
+    try { setPendingCsv(parseSaveMoneyCsv(await file.text())) }
+    catch (error) { setCsvStatus(error instanceof Error ? error.message : 'CSV 解析失败') }
+  }
+
+  async function confirmCsvImport() {
+    if (!pendingCsv || backupBusy) return
+    if (pendingCsv.errors.length) { setCsvStatus('存在无效数据，请修正文件后重新导入，未修改原账本'); return }
+    setBackupBusy(true)
+    try {
+      const result = await importCsvBills(pendingCsv.rows)
+      setCsvStatus(`成功导入 ${result.added} 笔，跳过重复 ${result.skipped} 笔。`)
+      setPendingCsv(null)
+    } catch { setCsvStatus('导入失败，原账本未被修改') }
+    finally { setBackupBusy(false) }
+  }
+
   async function exportData(kind: 'json' | 'csv' | 'xlsx') {
     if (backupBusy) return
     setBackupBusy(true)
@@ -454,6 +478,18 @@ export default function App() {
           <button disabled={backupBusy} onClick={() => exportData('xlsx')}>导出 Excel（月度分表）</button>
           <button disabled={backupBusy} onClick={() => exportData('csv')}>导出 CSV 账单</button>
         </div>
+      </div>
+      <div className="setting-card"><h3>导入 CSV 账单</h3><p>支持 SaveMoney 导出的 CSV 文件。只追加新账单，不覆盖现有账本；相同日期、类型、金额、分类和备注的记录视为重复。</p>
+        <label className="file-label">选择 CSV 账单<input type="file" accept=".csv,text/csv" disabled={backupBusy} onChange={e=>{void chooseCsv(e.target.files?.[0]);e.target.value=''}} /></label>
+        {pendingCsv && <div className="restore-preview">
+          <strong>导入预览</strong>
+          <p>有效 {pendingCsv.rows.length} 笔 · 异常 {pendingCsv.errors.length} 行</p>
+          <p>预计新增 {previewImport(pendingCsv.rows,entries??[],categoryList).fresh.length} 笔 · 重复 {previewImport(pendingCsv.rows,entries??[],categoryList).duplicates} 笔</p>
+          {pendingCsv.errors.length>0 && <p className="error" role="alert">发现异常行：{pendingCsv.errors.slice(0,5).map(e=>e.line).join('、')}。请修正后重试。</p>}
+          <button className="restore-button" disabled={backupBusy || pendingCsv.errors.length>0 || previewImport(pendingCsv.rows,entries??[],categoryList).fresh.length===0} onClick={()=>void confirmCsvImport()}>确认追加账单</button>
+          <button className="cancel-restore" disabled={backupBusy} onClick={()=>setPendingCsv(null)}>取消</button>
+        </div>}
+        {csvStatus && <p className="feedback" role="status">{csvStatus}</p>}
       </div>
       <div className="setting-card"><h3>从备份恢复</h3><p>选择此前导出的 SaveMoney JSON 文件。恢复会替换现有全部账本，操作前请先备份当前数据。</p>
         <label className="file-label">选择 JSON 备份文件<input type="file" accept="application/json,.json" disabled={backupBusy} onChange={e => {void chooseBackup(e.target.files?.[0]);e.target.value=''}} /></label>
