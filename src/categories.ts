@@ -10,13 +10,15 @@ export function hasDuplicateCategoryName(categories: Category[], type: Transacti
   return categories.some(category => category.type === type && category.id !== exceptId && category.name.toLocaleLowerCase() === name.toLocaleLowerCase())
 }
 
-export async function addCategory(type: TransactionType, rawName: string): Promise<void> {
+export async function addCategory(type: TransactionType, rawName: string): Promise<string> {
   const name = normalizeCategoryName(rawName)
   await db.transaction('rw', db.categories, async () => {
     const categories = await db.categories.toArray()
     if (hasDuplicateCategoryName(categories, type, name)) throw new Error('该分类名称已存在')
     const order = Math.max(0, ...categories.filter(c => c.type === type).map(c => c.sortOrder)) + 1
-    await db.categories.add({ id: crypto.randomUUID(), type, name, icon: 'ellipsis', sortOrder: order })
+    const id = crypto.randomUUID()
+    await db.categories.add({ id, type, name, icon: 'ellipsis', sortOrder: order })
+    return id
   })
 }
 
