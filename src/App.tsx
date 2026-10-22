@@ -565,8 +565,7 @@ export default function App() {
       {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
       {!budgetOpen && tab === 'home' && <>
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
-        <div className="section-heading home-section-heading"><h2>消费都花在哪了</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
-        {byCategory.length ? <SpendingDonut compact key={month} items={byCategory.map(item => ({ id:item.id, name:categoryName(categoryList,item.id), amount:item.amount }))} onOpenCategory={openCategoryBills}/> : <div className="empty home-chart-empty"><BarChart3 size={25}/><strong>还没有支出记录</strong><span>记一笔账，看看钱都花在哪里</span></div>}
+        <div className="home-v2-budget-heading"><h2>本月预算</h2><span>${currentBudget ? '掌握可用余额' : '规划本月支出'}</span></div>
         <button type="button" className="budget-card budget-action" aria-label={currentBudget ? '查看和管理月度预算' : '设置月度预算'} onClick={() => { setBudgetOpen(true); window.scrollTo(0, 0) }}>
           {currentBudget ? <>
             <div className="budget-heading"><span>月度预算</span><strong>管理 <ChevronRight size={15}/></strong></div>
@@ -575,6 +574,12 @@ export default function App() {
             <div className="budget-footer"><span>本月预算 ¥{money(currentBudget.amountMinor)}</span><span>已用 {budgetProgress(expenses,currentBudget.amountMinor).percent}%</span></div>
           </> : <div className="budget-heading"><span>还没有设置本月预算</span><strong>设置预算 <ChevronRight size={15}/></strong></div>}
         </button>
+
+        <div className="section-heading home-section-heading"><h2>消费结构</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
+        {byCategory.length ? <>
+          <div className="home-v2-top3" aria-label="消费最多的三个分类">{byCategory.slice(0,3).map((item,index)=><button key={item.id} type="button" onClick={()=>openCategoryBills(item.id)}><span className="home-v2-rank">{index+1}</span><span className="home-v2-category">{categoryName(categoryList,item.id)}</span><strong>¥{money(item.amount)}</strong><small>{expenses>0?Math.round(item.amount/expenses*100):0}%</small></button>)}</div>
+          <SpendingDonut compact key={month} items={byCategory.map(item => ({ id:item.id, name:categoryName(categoryList,item.id), amount:item.amount }))} onOpenCategory={openCategoryBills}/>
+        </> : <div className="empty home-chart-empty"><BarChart3 size={25}/><strong>还没有支出记录</strong><span>记一笔账，看看钱都花在哪里</span></div>}
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => goToTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </>}
