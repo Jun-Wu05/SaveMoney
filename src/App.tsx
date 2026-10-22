@@ -9,6 +9,8 @@ import { addCategory, updateCategoryDetails, deleteUnusedCategory } from './cate
 import { budgetProgress, removeMonthlyBudget, setMonthlyBudget } from './budget'
 import { SpendingDonut } from './SpendingDonut'
 import { monthlyExpenseTrend, spendingInsights } from './insights'
+import { dailySpendingSummary } from './dailySpending'
+import { DailySpendingChart } from './DailySpendingChart'
 import { SpendingTrend } from './SpendingTrend'
 import { groupEntriesByDay } from './dailyGroups'
 import { calculateMonthlyReview, reviewSentence } from './monthlyReview'
@@ -417,6 +419,7 @@ export default function App() {
   }, [monthEntries])
   const review = useMemo(() => calculateMonthlyReview(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries,categoryList,month,currentBudget?.amountMinor])
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
+  const dailySummary = useMemo(() => dailySpendingSummary(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
   const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>!drilldownIds || drilldownIds.includes(e.categoryId)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds])
   const ledgerExpense = sumMinor(filteredEntries, 'expense')
@@ -557,6 +560,13 @@ export default function App() {
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
         {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} onOpenCategory={openCategoryBills} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
+        <div className="section-heading"><h2>每日消费趋势</h2><span className="meta">{monthLabel(month)} · 按天统计</span></div>
+        <DailySpendingChart summary={dailySummary} />
+        <section className="daily-summary-grid">
+          <div><small>日均支出</small><strong>¥{money(dailySummary.averageMinor)}</strong><span>按 {dailySummary.comparedDays} 天计算</span></div>
+          <div><small>最高消费日</small><strong>{dailySummary.peakDay ? `${dailySummary.peakDay} 日` : '暂无'}</strong><span>{dailySummary.peakDay ? `¥${money(dailySummary.peakMinor)}` : '没有支出记录'}</span></div>
+          <div className="daily-compare"><small>上月同期对比</small><strong>{dailySummary.percentChange === null ? '—' : `${dailySummary.percentChange > 0 ? '+' : ''}${dailySummary.percentChange.toFixed(1)}%`}</strong><span>本期 ¥{money(dailySummary.totalMinor)} · 上期 ¥{money(dailySummary.previousMinor)}</span><span>对比前 {dailySummary.comparedDays} 天（上月最多 {dailySummary.previousDays} 天）{dailySummary.percentChange === null ? ' · 上期为零，无法计算百分比' : ''}</span></div>
+        </section>
         <div className="section-heading"><h2>近 6 个月支出趋势</h2><span className="meta">截至所选月份</span></div>
         <SpendingTrend points={trend} />
         <div className="section-heading"><h2>月度回顾</h2><span className="meta">{monthLabel(month)}</span></div>
