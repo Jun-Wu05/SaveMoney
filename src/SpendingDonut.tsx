@@ -11,7 +11,7 @@ export function chartSlices(items: SpendingSlice[]): SpendingSlice[] {
   return [...top, { id: '__remaining__', name: '其他分类', amount: positive.slice(5).reduce((sum, item) => sum + item.amount, 0) }]
 }
 
-export function SpendingDonut({ items }: { items: SpendingSlice[] }) {
+export function SpendingDonut({ items, onOpenCategory }: { items: SpendingSlice[]; onOpenCategory?: (categoryIds: string[]) => void }) {
   const slices = chartSlices(items)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const total = slices.reduce((sum, item) => sum + item.amount, 0)
@@ -50,5 +50,6 @@ export function SpendingDonut({ items }: { items: SpendingSlice[] }) {
       <span className="legend-value">¥ {money(item.amount)}</span>
       <strong className="legend-percent">{(item.amount / total * 100).toFixed(1)}%</strong>
     </button>)}</div>
+    {selected && onOpenCategory && <button className="drilldown-button" onClick={() => onOpenCategory(selected.id === '__remaining__' ? items.slice(5).map(x => x.id) : [selected.id])}>查看「{selected.name}」账单 →</button>}
   </section>
 }

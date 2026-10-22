@@ -39,3 +39,5 @@
 .ledger-tools input{width:100%;background:#fff;border:1px solid #dfe5dd;border-radius:13px;padding:13px;color:#202522}.ledger-filters{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 20px}.ledger-filters button{border:0;background:#e9ede6;color:#627269;padding:8px 11px;border-radius:18px;font-size:12px}.ledger-filters button.active{background:#527d66;color:white}
 
 .copy-last{width:100%;padding:10px;border:1px solid #d0ded0;border-radius:11px;background:#e8efe8;color:#527d66;font-size:12px;margin:-9px 0 15px;text-align:center}
+
+.drilldown-button{margin:12px auto 0;padding:12px 18px;display:block;border:0;border-radius:12px;background:#e6eee5;color:#436b50;font-size:13px;font-weight:700}.filter-notice{display:flex;justify-content:space-between;align-items:center;background:#edf3eb;border-radius:10px;padding:10px 12px;font-size:12px;color:#527d66;gap:10px}.filter-notice button{border:0;background:none;text-decoration:underline;color:#527d66;font-size:12px}
