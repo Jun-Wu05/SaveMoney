@@ -12,25 +12,14 @@ export function DailySpendingChart({ summary }: { summary: DailySummary }) {
     <div className="daily-chart-readout" role="status" aria-live="polite">
       {chosen ? <><strong>{chosen.day} 日</strong><span>支出 ¥{money(chosen.amountMinor)}</span></> : <span>轻点柱状图，查看当天支出</span>}
     </div>
-    <svg viewBox={`0 0 ${width} 157`} role="group" aria-label="每日支出柱状图，点击日期查看金额"
-      className="daily-chart-interactive"
-      onClick={event => {
-        const svg = event.currentTarget
-        const bounds = svg.getBoundingClientRect()
-        if (!bounds.width) return
-        const x = (event.clientX - bounds.left) * width / bounds.width
-        const index = Math.floor((x - left) / step)
-        if (index >= 0 && index < summary.points.length) setSelectedDay(summary.points[index].day)
-      }}>
+    <div className="daily-chart-touch-wrap">
+    <svg viewBox={`0 0 ${width} 157`} role="img" aria-label="每日支出柱状图，轻点图中日期查看金额">
       <line x1={left} x2={left + chartWidth} y1={base} y2={base} stroke="#dce4db" />
       {summary.points.map(p => {
         const height = p.amountMinor / max * 102
         const x = left + (p.day - 1) * step + 1
         const selected = selectedDay === p.day
-        return <g key={p.day} className={selected ? 'daily-chart-day is-selected' : 'daily-chart-day'}
-          role="button" tabIndex={0} aria-label={`${p.day}日，支出${money(p.amountMinor)}元`} aria-pressed={selected}
-          onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedDay(p.day) } }}>
-          <rect className="daily-chart-hit" x={left + (p.day - 1) * step} y="8" width={step} height={base + 12} fill="transparent" />
+        return <g key={p.day} className={selected ? 'daily-chart-day is-selected' : 'daily-chart-day'}>
           <rect className="daily-chart-bar" x={x} y={base - height}
             width={Math.max(2, step - 2)} height={Math.max(0, height)} rx="2"
             fill={p.day > summary.comparedDays ? '#e7eae5' : selected ? '#365e47' : '#648c73'}
