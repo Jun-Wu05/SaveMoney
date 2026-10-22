@@ -319,6 +319,10 @@ export default function App() {
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
   const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>!drilldownIds || drilldownIds.includes(e.categoryId)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds])
+  const ledgerExpense = sumMinor(filteredEntries, 'expense')
+  const ledgerIncome = sumMinor(filteredEntries, 'income')
+  const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterType !== 'all' || allMonths)
+  const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterType('all'); setAllMonths(false) }
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new', date?: string) => { setNewEntryDate(date); setEditing(entry) }
   const closeEditor = () => { setEditing(null); setNewEntryDate(undefined) }
@@ -421,6 +425,10 @@ export default function App() {
             <button className={filterType==='expense'?'active':''} onClick={()=>setFilterType('expense')}>支出</button>
             <button className={filterType==='income'?'active':''} onClick={()=>setFilterType('income')}>收入</button>
           </div>
+        </div>
+        <div className="ledger-result-summary" role="status" aria-live="polite">
+          <div><span>{ledgerHasFilters ? '筛选结果' : '账单汇总'} · {filteredEntries.length} 笔</span><strong>支出 ¥{money(ledgerExpense)} <em>收入 ¥{money(ledgerIncome)}</em></strong></div>
+          {ledgerHasFilters && <button type="button" onClick={clearLedgerFilters}>清除筛选</button>}
         </div>
         {ledgerView==='calendar' ? <ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={setCalendarDate} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor}/> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><strong>{day.date}</strong><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
       </>}

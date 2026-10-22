@@ -303,3 +303,12 @@
   .editor .category{min-height:56px}
   .editor .amount-keypad button{min-height:42px}
 }
+
+/* SaveMoney 2.0 — ledger: contextual totals for the visible filter result. */
+.ledger-result-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid #e6eae2;border-radius:14px;padding:13px 14px;margin:0 0 14px}
+.ledger-result-summary>div{min-width:0;display:flex;flex-direction:column;gap:7px}
+.ledger-result-summary span{font-size:11px;color:#7a877b}
+.ledger-result-summary strong{font-size:14px;color:#263b2c;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ledger-result-summary em{font-style:normal;font-size:12px;font-weight:500;color:#64816c;margin-left:9px}
+.ledger-result-summary button{flex:none;border:0;background:#e7eee7;color:#426b51;border-radius:10px;padding:9px 10px;font-size:11px;font-weight:650;min-height:36px}
+@media(max-width:360px){.ledger-result-summary{align-items:flex-start}.ledger-result-summary em{display:block;margin:5px 0 0}}
