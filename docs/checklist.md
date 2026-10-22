@@ -15,9 +15,9 @@
 
 ## 尚待真实环境验证
 
-- [ ] GitHub Actions 中 npm test 成功
-- [ ] GitHub Actions 中 npm run build 成功
-- [ ] GitHub Pages 已启用且发布成功
+- [x] GitHub Actions 中 npm test 成功（9 项）
+- [x] GitHub Actions 中 npm run build 成功
+- [ ] GitHub Pages 已启用且发布成功（目前需要仓库所有者在 Settings → Pages → Source 选择 GitHub Actions）
 - [ ] iPhone 真机主屏幕安装
 - [ ] 飞行模式下断网记账
 - [ ] iPhone 实际导出、保存、恢复文件
