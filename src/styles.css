@@ -645,3 +645,22 @@
   .motion-page,.motion-sheet,.motion-sheet>.editor,.motion-sheet-closing,.motion-sheet-closing>.editor,.ledger-v3-panel,.save-toast,.motion-save-check{animation:none!important;transition:none!important}
   .nav-item,.nav-item svg,.add-button,.category,.type-toggle button,.ledger-v3-actions button,.editor-footer-actions button{transition:none!important}
 }
+
+
+/* Motion V1 C: stable calendar cells, calm date/detail feedback */
+@media(prefers-reduced-motion:no-preference){
+  .calendar-day{transition:background-color 180ms ease-out,border-color 180ms ease-out,box-shadow 180ms ease-out}
+  .calendar-day strong,.calendar-day small{transition:color 180ms ease-out}
+  .calendar-detail-motion{animation:sm-calendar-detail-in 190ms ease-out both}
+  @keyframes sm-calendar-detail-in{from{opacity:.35;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+  .calendar-entry-delete{transition:background-color 150ms ease-out,color 150ms ease-out,transform 120ms ease-out}
+  .calendar-entry-delete:active:not(:disabled){transform:scale(.9)}
+  .calendar-entry-delete.is-deleting svg{animation:sm-delete-confirm 160ms ease-out both}
+  @keyframes sm-delete-confirm{from{opacity:1;transform:scale(1)}to{opacity:.45;transform:scale(.85)}}
+  .calendar-entry-wrap{transition:background-color 150ms ease-out}
+  .calendar-entry-wrap:active{background:#f5f8f3}
+}
+@media(prefers-reduced-motion:reduce){
+  .calendar-day,.calendar-day strong,.calendar-day small,.calendar-entry-delete,.calendar-entry-wrap{transition:none!important}
+  .calendar-detail-motion,.calendar-entry-delete.is-deleting svg{animation:none!important}
+}
