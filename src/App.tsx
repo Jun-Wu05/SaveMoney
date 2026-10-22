@@ -141,12 +141,12 @@ function EntryRow({ entry, categories, onEdit, onDeleted }: { entry: Entry; cate
   </div>
 }
 
-function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved, onDeleted }: { categories: Category[]; entries: Entry[]; entry: Entry | null; initialDate?: string; onClose: () => void; onSaved: (message: string) => void; onDeleted: () => void }) {
-  const [type, setType] = useState<TransactionType>(entry?.type ?? 'expense')
-  const [amount, setAmount] = useState(entry ? (entry.amountMinor / 100).toFixed(2) : '')
-  const [categoryId, setCategoryId] = useState(entry?.categoryId ?? '')
+function EntryEditor({ categories, entries, entry, template, initialDate, onClose, onSaved, onQuickSaved, onDeleted, onDuplicate }: { categories: Category[]; entries: Entry[]; entry: Entry | null; template?: Entry | null; initialDate?: string; onClose: () => void; onSaved: (message: string) => void; onQuickSaved: (message: string) => void; onDeleted: () => void; onDuplicate: (entry: Entry) => void }) {
+  const [type, setType] = useState<TransactionType>(entry?.type ?? template?.type ?? 'expense')
+  const [amount, setAmount] = useState(entry || template ? ((entry ?? template)!.amountMinor / 100).toFixed(2) : '')
+  const [categoryId, setCategoryId] = useState(entry?.categoryId ?? template?.categoryId ?? '')
   const [date, setDate] = useState(entry?.date ?? initialDate ?? localDay(new Date()))
-  const [note, setNote] = useState(entry?.note ?? '')
+  const [note, setNote] = useState(entry?.note ?? template?.note ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
@@ -231,6 +231,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (busy) return
+    const saveAndContinue = !entry && ((event.nativeEvent as SubmitEvent).submitter as HTMLElement | null)?.dataset.action === 'again'
     const amountMinor = parseAmountMinor(amount)
     if (amountMinor === null) return setError('请输入正确的金额，最多两位小数')
     if (!isValidLocalDate(date)) return setError('请选择有效日期')
@@ -242,7 +243,12 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
         id: entry?.id ?? crypto.randomUUID(), type, amountMinor, categoryId: selected,
         date, note: note.trim().slice(0, 200), createdAt: entry?.createdAt ?? timestamp, updatedAt: timestamp,
       })
-      onSaved(entry ? '修改已保存' : '记账成功，已保存到本机')
+      if (saveAndContinue) {
+        setAmount('')
+        setNote('')
+        setCategoryId(selected)
+        onQuickSaved('已保存一笔，可以继续记账')
+      } else onSaved(entry ? '修改已保存' : '记账成功，已保存到本机')
     } catch {
       setError('保存失败，请检查设备存储空间')
     } finally { setBusy(false) }
@@ -303,9 +309,11 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
         <button type="button" className="manage-category-link" onClick={() => {setCategoryView('manage');setError('')}}>管理分类 <ChevronRight size={16}/></button>
         <div className="form-fields"><label>日期<input required type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label>备注（可选）<input maxLength={200} placeholder="写点什么…" value={note} onChange={e => setNote(e.target.value)} /></label></div>
         {error && <p className="error" role="alert">{error}</p>}
+        {entry && <button className="copy-entry-button" type="button" disabled={busy} onClick={() => onDuplicate(entry)}>复制为新账单 <ChevronRight size={16}/></button>}
         {entry && <button className="delete-button" type="button" disabled={busy} onClick={remove}><Trash2 size={16}/> 删除这笔记录</button>}
       </form>
       {categoryView === 'list' && <footer className="editor-footer">
+        {!entry && <button className="save-again-button" type="submit" form="entry-editor-form" data-action="again" disabled={busy}>保存并继续</button>}
         <button className="save-button" type="submit" form="entry-editor-form" disabled={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
       </footer>}
     </section>
@@ -374,6 +382,7 @@ export default function App() {
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
+  const [copyTemplate, setCopyTemplate] = useState<Entry | null>(null)
   const [ledgerView, setLedgerView] = useState<'list'|'calendar'>('calendar')
   const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [toast, setToast] = useState('')
@@ -415,8 +424,9 @@ export default function App() {
   const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterType !== 'all' || allMonths)
   const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterType('all'); setAllMonths(false) }
   const recent = monthEntries.slice(0, 5)
-  const openEditor = (entry: Entry | 'new', date?: string) => { setNewEntryDate(date); setEditing(entry) }
-  const closeEditor = () => { setEditing(null); setNewEntryDate(undefined) }
+  const openEditor = (entry: Entry | 'new', date?: string) => { setCopyTemplate(null); setNewEntryDate(date); setEditing(entry) }
+  const duplicateEntry = (entry: Entry) => { setCopyTemplate(entry); setNewEntryDate(undefined); setEditing('new') }
+  const closeEditor = () => { setEditing(null); setNewEntryDate(undefined); setCopyTemplate(null) }
   const notifyChange = (message: string) => { closeEditor(); setToast(message) }
   const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
@@ -629,6 +639,6 @@ export default function App() {
       <button className="add-button" aria-label="记一笔" onClick={() => openEditor('new')}><Plus size={25}/></button>
       {nav.slice(2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => goToTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
     </nav>
-    {editing && <EntryEditor key={editing === 'new' ? 'new' : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} initialDate={newEntryDate} onClose={closeEditor} onSaved={notifyChange} onDeleted={()=>notifyChange('账单已删除')}/>}
+    {editing && <EntryEditor key={editing === 'new' ? (copyTemplate ? `copy-${copyTemplate.id}` : 'new') : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} template={copyTemplate} initialDate={newEntryDate} onClose={closeEditor} onSaved={notifyChange} onQuickSaved={setToast} onDeleted={()=>notifyChange('账单已删除')} onDuplicate={duplicateEntry}/>}
   </div>
 }

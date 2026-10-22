@@ -408,3 +408,11 @@
  .swipe-entry .entry-icon{width:36px;height:36px}
  .swipe-entry .amount{font-size:13px}
 }
+
+/* Fast entry actions live in the fixed editor footer; no extra scrolling. */
+.editor-footer{display:flex;gap:10px;align-items:stretch}
+.editor-footer .save-button{flex:1;min-width:0;margin-top:0}
+.save-again-button{flex:0 0 auto;min-height:49px;padding:0 14px;border:1px solid #d8e4d9;border-radius:13px;background:#edf3ed;color:#426b51;font-size:13px;font-weight:650}
+.copy-entry-button{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;border:0;background:#edf3ed;color:#426b51;border-radius:11px;padding:12px;margin-top:14px;font-size:13px;font-weight:650}
+.save-again-button:focus-visible,.copy-entry-button:focus-visible{outline:2px solid #527d66;outline-offset:2px}
+@media(max-width:360px){.editor-footer{gap:7px}.save-again-button{padding:0 10px;font-size:12px}}
