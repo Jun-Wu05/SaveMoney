@@ -41,3 +41,5 @@
 .copy-last{width:100%;padding:10px;border:1px solid #d0ded0;border-radius:11px;background:#e8efe8;color:#527d66;font-size:12px;margin:-9px 0 15px;text-align:center}
 
 .drilldown-button{margin:12px auto 0;padding:12px 18px;display:block;border:0;border-radius:12px;background:#e6eee5;color:#436b50;font-size:13px;font-weight:700}.filter-notice{display:flex;justify-content:space-between;align-items:center;background:#edf3eb;border-radius:10px;padding:10px 12px;font-size:12px;color:#527d66;gap:10px}.filter-notice button{border:0;background:none;text-decoration:underline;color:#527d66;font-size:12px}
+
+.review-card{background:#fff;padding:18px;border-radius:18px}.review-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.review-metrics div{display:flex;flex-direction:column;gap:7px}.review-metrics small{color:#849086;font-size:11px}.review-metrics strong{font-size:17px;color:#263429}.review-card p{font-size:12px;line-height:1.7;color:#647467;margin:15px 0 0}
