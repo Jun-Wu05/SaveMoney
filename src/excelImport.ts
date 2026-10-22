@@ -36,7 +36,7 @@ export function parseMonthlyRows(rows: Cell[][], sheet: string): CsvImportPrevie
   return {rows:bills,errors}
 }
 export async function parseSaveMoneyExcel(file: File): Promise<CsvImportPreview> {
-  const {default:readXlsxFile,readSheetNames}=await import('read-excel-file/browser')
+  const {default:readXlsxFile,readSheetNames}=await import('read-excel-file')
   const names=await readSheetNames(file)
   const months=names.filter(name=>/^\d{4}-(0[1-9]|1[0-2])$/.test(name))
   if(!months.length)throw new Error('没有找到 SaveMoney 月度工作表')
