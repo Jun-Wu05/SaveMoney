@@ -27,3 +27,9 @@
 .legend-name{font-size:13px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .legend-value{font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .legend-percent{font-size:12px;width:52px;text-align:right;color:#647267;font-variant-numeric:tabular-nums}
+
+.trend-card{background:#fff;border-radius:18px;padding:15px 15px 11px}
+.trend-card svg{display:block;width:100%;height:auto;max-width:450px;margin:auto;overflow:visible}
+.trend-accessible{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;color:#818b81;font-size:11px;text-align:center;margin-top:8px}
+.insight-card{background:#e8efe8;border-radius:18px;padding:14px 18px;color:#3d5645}
+.insight-card p{font-size:13px;line-height:1.75;margin:8px 0;padding-left:10px;border-left:2px solid #86a38d}
