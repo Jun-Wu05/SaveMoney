@@ -44,14 +44,14 @@ export function ExpenseCalendar({ month, entries, categories, selectedDate, onSe
         {day.count>0&&<span className="calendar-indicator" style={{opacity:maxExpense>0 && day.expenseMinor>0 ? .3+.7*day.expenseMinor/maxExpense : .4}}/>}
       </button>)}
     </div>
-    {chosen ? <div className="calendar-detail">
+    {chosen ? <div key={chosen.date} className="calendar-detail calendar-detail-motion">
       <div className="calendar-detail-title"><div><strong>{chosen.date} · {chosen.count} 笔</strong><small>支出 ¥{money(chosen.expenseMinor)}{chosen.incomeMinor>0?` · 收入 ¥${money(chosen.incomeMinor)}`:''}</small></div>
         <button type="button" onClick={()=>onCreateDate(chosen.date)}><Plus size={16}/> 记这一天</button></div>
       {transactions.length?transactions.map(entry=><div className="calendar-entry-wrap" key={entry.id}>
         <button className="calendar-entry" type="button" onClick={()=>onEdit(entry)} aria-label={`编辑${names.get(entry.categoryId)??'其他'}账单`}>
           <span>{names.get(entry.categoryId)??'其他'}{entry.note?` · ${entry.note}`:''}</span><strong className={entry.type==='income'?'income':''}>{entry.type==='income'?'+':'−'} ¥{money(entry.amountMinor)}</strong>
         </button>
-        <button className="calendar-entry-delete" type="button" disabled={deletingId!==null} onClick={()=>void deleteOne(entry)} aria-label={`删除${names.get(entry.categoryId)??'其他'} ${money(entry.amountMinor)}元账单`} title="删除这笔账单"><Trash2 size={17}/></button>
+        <button className={`calendar-entry-delete ${deletingId===entry.id?'is-deleting':''}`} type="button" disabled={deletingId!==null} onClick={()=>void deleteOne(entry)} aria-label={`删除${names.get(entry.categoryId)??'其他'} ${money(entry.amountMinor)}元账单`} title="删除这笔账单"><Trash2 size={17}/></button>
       </div>):<p className="calendar-no-entry">这一天还没有账单，可以补记一笔。</p>}
     </div>:<p className="calendar-no-entry">选择一天，查看消费记录或补记账单。</p>}
   </section>
