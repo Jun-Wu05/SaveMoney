@@ -418,12 +418,16 @@ export default function App() {
   const [backupBusy, setBackupBusy] = useState(false)
   const [updateReady, setUpdateReady] = useState(false)
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
+  const backupAgeDays = lastBackup && Number.isFinite(Date.parse(lastBackup)) ? Math.max(0,Math.floor((Date.now()-Date.parse(lastBackup))/86_400_000)) : null
+  const backupReminder = backupAgeDays === null || backupAgeDays >= 7
   useEffect(() => { const callback = () => setUpdateReady(true); window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
   useEffect(() => { setCalendarDate(null) }, [month])
   useEffect(() => { if (!toast) return; const timeout = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(timeout) }, [toast])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
   const currentBudget = useLiveQuery(() => db.budgets.get(month), [month])
+  const budgetCount = useLiveQuery(() => db.budgets.count(), [], 0)
+  const categoryBudgetCount = useLiveQuery(() => db.categoryBudgets.count(), [], 0)
   const categoryBudgets = useLiveQuery(() => db.categoryBudgets.where('month').equals(month).toArray(), [month], [])
   const [categoryBudgetEditing, setCategoryBudgetEditing] = useState<string | null>(null)
   const [categoryBudgetInput, setCategoryBudgetInput] = useState('')
@@ -512,7 +516,7 @@ export default function App() {
 
   async function confirmRestore() {
     if (!pendingBackup || backupBusy) return
-    if (!window.confirm(`即将用备份中的 ${pendingBackup.entries.length} 笔账单替换当前全部数据。这个操作无法撤销，请先导出当前账本。是否继续？`)) return
+    if (!window.confirm(`当前账本 ${entries?.length ?? 0} 笔 → 备份 ${pendingBackup.entries.length} 笔。恢复会覆盖当前全部账单、分类及预算，无法撤销。请先导出当前 JSON 备份并确认文件已保存。确定继续吗？`)) return
     setBackupBusy(true)
     try {
       await restoreBackup(pendingBackup)
@@ -551,7 +555,7 @@ export default function App() {
       if (kind === 'json') { await downloadBackup(); const at = new Date().toISOString(); localStorage.setItem('savemoney-last-backup-created', at); setLastBackup(at) }
       else if (kind === 'csv') await downloadCsv()
       else await downloadExcel()
-      setBackupStatus('文件已生成。请确认已保存到 iPhone「文件」App 或 iCloud Drive。')
+      setBackupStatus(kind === 'json' ? '完整备份文件已生成。请在 iPhone「文件」App 或 iCloud Drive 确认文件已保存；生成文件不等于已安全备份。' : '导出文件已生成。请在「文件」App 或 iCloud Drive 确认已保存。')
     } catch { setBackupStatus('导出失败，请检查浏览器权限或设备空间') }
     finally { setBackupBusy(false) }
   }
@@ -640,9 +644,10 @@ export default function App() {
           <div className="settings-v2-group-title">账本管理</div>
           <section className="settings-v2-menu">
             <button onClick={() => openSettingsPage('categories')}><LayoutGrid size={19}/><span><strong>分类管理</strong><small>支出与收入分类</small></span><ChevronRight size={17}/></button>
-            <button onClick={() => openSettingsPage('data')}><DatabaseBackup size={19}/><span><strong>数据管理</strong><small>备份、恢复与导入导出</small></span><ChevronRight size={17}/></button>
+            <button onClick={() => openSettingsPage('data')}><DatabaseBackup size={19}/><span><strong>数据管理</strong><small>{backupReminder ? '建议备份 · 点击查看' : '备份、恢复与导入导出'}</small></span><ChevronRight size={17}/></button>
             <button onClick={() => openSettingsPage('preferences')}><SlidersHorizontal size={19}/><span><strong>记账偏好</strong><small>账单默认显示方式</small></span><ChevronRight size={17}/></button>
           </section>
+          {backupReminder && <button type="button" className="backup-v2-reminder" onClick={() => openSettingsPage('data')}><ShieldCheck size={18}/><span><strong>{backupAgeDays === null ? '还没有生成完整备份' : `距离上次生成备份已 ${backupAgeDays} 天`}</strong><small>建议每周导出 JSON 并保存到文件或 iCloud</small></span><ChevronRight size={16}/></button>}
           <div className="settings-v2-group-title">应用</div>
           <section className="settings-v2-menu">
             <button onClick={() => openSettingsPage('privacy')}><ShieldCheck size={19}/><span><strong>隐私与数据安全</strong></span><ChevronRight size={17}/></button>
@@ -652,7 +657,7 @@ export default function App() {
           <button className="settings-v2-back" type="button" onClick={() => openSettingsPage('root')}><ChevronLeft size={19}/> 返回设置</button>
           <h2 className="settings-v2-page-title">{{data:'数据管理',categories:'分类管理',preferences:'记账偏好',help:'帮助中心',privacy:'隐私与数据安全',about:'关于 SaveMoney'}[settingsPage]}</h2>
           {settingsPage === 'data' && <>
-            <div className="setting-card"><h3>备份状态</h3><p>{lastBackup ? `上次生成备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}` : '尚未生成完整备份'}</p><p>建议每周备份，并确认文件已保存到「文件」或 iCloud Drive。</p></div>
+            <div className="setting-card"><h3>备份状态</h3><p>{backupAgeDays !== null && lastBackup ? `上次生成：${new Date(lastBackup).toLocaleString('zh-CN')}（${backupAgeDays} 天前）` : '尚未生成完整 JSON 备份'}</p><p>{backupReminder ? '建议现在导出一份完整备份。' : '建议每周更新完整备份。'}生成记录仅保存在当前设备，无法检测文件是否实际保存；请到「文件」App 或 iCloud Drive 确认。</p></div>
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；Excel 按月份分 Sheet 并包含汇总，CSV 包含全量账单及总计；仅 JSON 可完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
@@ -677,7 +682,9 @@ export default function App() {
         {pendingBackup && <div className="restore-preview">
           <strong>恢复预览</strong>
           <p>备份时间：{new Date(pendingBackup.exportedAt).toLocaleString('zh-CN')}</p>
-          <p>{pendingBackup.entries.length} 笔记录 · {pendingBackup.categories.length} 个分类</p>
+          <div className="backup-v2-compare"><div><small>当前账本</small><strong>{(entries ?? []).length} 笔</strong><span>{categoryList.length} 个分类</span></div><div><small>将恢复的备份</small><strong>{pendingBackup.entries.length} 笔</strong><span>{pendingBackup.categories.length} 个分类</span></div></div>
+          <p>月度预算：当前 {budgetCount} 项 → 备份 {pendingBackup.budgets?.length ?? 0} 项；分类预算：当前 {categoryBudgetCount} 项 → 备份 {pendingBackup.categoryBudgets?.length ?? 0} 项。</p>
+          <p className="backup-v2-warning">⚠️ 恢复将完全覆盖当前数据，不会自动合并。请先导出当前 JSON 备份。</p>
           <button className="restore-button" disabled={backupBusy} onClick={() => void confirmRestore()}>确认覆盖并恢复</button>
           <button className="cancel-restore" disabled={backupBusy} onClick={() => setPendingBackup(null)}>取消</button>
         </div>}
