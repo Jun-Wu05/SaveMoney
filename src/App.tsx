@@ -111,7 +111,8 @@ function EntryRow({ entry, categories, onEdit, onDeleted }: { entry: Entry; cate
       const t=e.touches[0], dx=t.clientX-start.current.x,dy=t.clientY-start.current.y
       if (start.current.axis==='pending') {
         if(Math.max(Math.abs(dx),Math.abs(dy))<9)return
-        start.current.axis=Math.abs(dx)>Math.abs(dy)*1.3?'horizontal':'vertical'
+        // Prefer native vertical scrolling unless the swipe is clearly horizontal.
+        start.current.axis=Math.abs(dx)>Math.abs(dy)*1.6?'horizontal':'vertical'
       }
       if(start.current.axis!=='horizontal')return
       suppressClick.current=true
@@ -159,7 +160,8 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
     if (busy || motionState !== 'idle') return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { onClose(); return }
     setMotionState('closing')
-    motionTimer.current = window.setTimeout(onClose, 190)
+    if (motionTimer.current !== null) window.clearTimeout(motionTimer.current)
+    motionTimer.current = window.setTimeout(() => { motionTimer.current = null; onClose() }, 190)
   }
   const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -280,7 +282,8 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) onSaved(message)
         else {
           setMotionState('saved')
-          motionTimer.current = window.setTimeout(() => onSaved(message), 340)
+          if (motionTimer.current !== null) window.clearTimeout(motionTimer.current)
+          motionTimer.current = window.setTimeout(() => { motionTimer.current = null; onSaved(message) }, 340)
         }
       }
     } catch {
