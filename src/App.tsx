@@ -120,7 +120,7 @@ export default function App() {
     for (const e of monthEntries.filter(e => e.type === 'expense')) map.set(e.categoryId, (map.get(e.categoryId) ?? 0) + e.amountMinor)
     return Array.from(map, ([id, amount]) => ({ id, amount })).sort((a,b) => b.amount - a.amount)
   }, [monthEntries])
-  const recent = [...(entries ?? [])].sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0,5)
+  const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new') => setEditing(entry)
 
   async function chooseBackup(file?: File) {
