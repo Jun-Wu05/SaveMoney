@@ -1,11 +1,11 @@
 /* Minimal offline shell for GitHub Pages project site. No external analytics. */
-const CACHE = 'savemoney-shell-v2'
+const CACHE = 'savemoney-shell-v3'
 const BASE = self.registration.scope
 const PRECACHE = '__PRECACHE_ASSETS__'
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([BASE, BASE + 'manifest.webmanifest', BASE + 'icon.svg', ...PRECACHE])))
-  self.skipWaiting()
 })
+self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting() })
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys()
