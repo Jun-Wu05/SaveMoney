@@ -231,6 +231,7 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (busy) return
+    const saveAndContinue = !entry && ((event.nativeEvent as SubmitEvent).submitter as HTMLElement | null)?.dataset.action === 'again'
     const amountMinor = parseAmountMinor(amount)
     if (amountMinor === null) return setError('请输入正确的金额，最多两位小数')
     if (!isValidLocalDate(date)) return setError('请选择有效日期')
@@ -242,8 +243,7 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
         id: entry?.id ?? crypto.randomUUID(), type, amountMinor, categoryId: selected,
         date, note: note.trim().slice(0, 200), createdAt: entry?.createdAt ?? timestamp, updatedAt: timestamp,
       })
-      const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLElement | null
-      if (!entry && submitter?.dataset.action === 'again') {
+      if (saveAndContinue) {
         setAmount('')
         setNote('')
         setCategoryId(selected)
