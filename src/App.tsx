@@ -152,6 +152,15 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
   const [note, setNote] = useState(entry?.note ?? template?.note ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [motionState, setMotionState] = useState<'idle' | 'closing' | 'saved'>('idle')
+  const motionTimer = useRef<number | null>(null)
+  useEffect(() => () => { if (motionTimer.current !== null) window.clearTimeout(motionTimer.current) }, [])
+  function requestClose() {
+    if (busy || motionState !== 'idle') return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { onClose(); return }
+    setMotionState('closing')
+    motionTimer.current = window.setTimeout(onClose, 190)
+  }
   const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newCategoryIcon, setNewCategoryIcon] = useState('ellipsis')
@@ -266,7 +275,14 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
         setNote('')
         setCategoryId(selected)
         onQuickSaved('已保存一笔，可以继续记账')
-      } else onSaved(entry ? '修改已保存' : '记账成功，已保存到本机')
+      } else {
+        const message = entry ? '修改已保存' : '记账成功，已保存到本机'
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) onSaved(message)
+        else {
+          setMotionState('saved')
+          motionTimer.current = window.setTimeout(() => onSaved(message), 340)
+        }
+      }
     } catch {
       setError('保存失败，请检查设备存储空间')
     } finally { setBusy(false) }
@@ -293,9 +309,9 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
     finally { setCategoryBusy(false) }
   }
 
-  return createPortal(<div ref={overlayRef} className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
+  return createPortal(<div ref={overlayRef} className={`modal-backdrop motion-sheet ${motionState === 'closing' ? 'motion-sheet-closing' : ''}`} onMouseDown={event => { if (event.target === event.currentTarget) requestClose() }}>
     <section className="editor" role="dialog" aria-modal="true" aria-label={entry ? '编辑账单' : '记一笔'}>
-      <header className="editor-header"><button type="button" className="icon-button" onClick={categoryView !== 'list' ? () => { setCategoryView('list'); setError('') } : onClose} aria-label={categoryView !== 'list' ? '返回记账' : '关闭'}>{categoryView !== 'list' ? <ChevronLeft size={22}/> : <X size={22}/>}</button><strong>{categoryView === 'manage' ? '管理分类' : categoryView === 'new' ? '新增分类' : entry ? '编辑账单' : '记一笔'}</strong><span style={{width:40}}/></header>
+      <header className="editor-header"><button type="button" className="icon-button" onClick={categoryView !== 'list' ? () => { setCategoryView('list'); setError('') } : requestClose} aria-label={categoryView !== 'list' ? '返回记账' : '关闭'}>{categoryView !== 'list' ? <ChevronLeft size={22}/> : <X size={22}/>}</button><strong>{categoryView === 'manage' ? '管理分类' : categoryView === 'new' ? '新增分类' : entry ? '编辑账单' : '记一笔'}</strong><span style={{width:40}}/></header>
       {categoryView === 'new' && <form className="inline-category-form editor-scroller" onSubmit={createInlineCategory}>
         <p>新增{type === 'expense' ? '支出' : '收入'}分类，完成后将自动选中；已填写的金额、日期和备注都会保留。</p>
         <label htmlFor="new-category-name">分类名称</label>
@@ -330,6 +346,7 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
         {entry && <button className="copy-entry-button" type="button" disabled={busy} onClick={() => onDuplicate(entry)}>复制为新账单 <ChevronRight size={16}/></button>}
         {entry && <button className="delete-button" type="button" disabled={busy} onClick={remove}><Trash2 size={16}/> 删除这笔记录</button>}
       </form>
+      {motionState === 'saved' && <div className="motion-save-success" role="status" aria-live="polite"><span className="motion-save-check">✓</span><strong>{entry ? '修改已保存' : `已记下 ¥${money(parseAmountMinor(amount) ?? 0)}`}</strong></div>}
       {categoryView === 'list' && <footer className="editor-footer">
         <div className="editor-footer-actions">
           {!entry && <button className="save-again-button" type="submit" form="entry-editor-form" data-action="again" disabled={busy}>保存并继续</button>}
@@ -568,7 +585,7 @@ export default function App() {
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
       {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
-      {!budgetOpen && tab === 'home' && <>
+      {!budgetOpen && tab === 'home' && <div key="motion-home" className="motion-page">
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
         <div className="home-v2-budget-heading"><h2>本月预算</h2><span>${currentBudget ? '掌握可用余额' : '规划本月支出'}</span></div>
         <button type="button" className="budget-card budget-action" aria-label={currentBudget ? '查看和管理月度预算' : '设置月度预算'} onClick={() => { setBudgetOpen(true); window.scrollTo(0, 0) }}>
@@ -587,8 +604,8 @@ export default function App() {
         </> : <div className="empty home-chart-empty"><BarChart3 size={25}/><strong>还没有支出记录</strong><span>记一笔账，看看钱都花在哪里</span></div>}
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => goToTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
-      </>}
-      {!budgetOpen && tab === 'list' && <>
+      </div>}
+      {!budgetOpen && tab === 'list' && <div key="motion-list" className="motion-page">
         <div className="ledger-v3-heading"><h2>账单明细</h2><div className="ledger-v3-actions"><button type="button" className={ledgerFiltersOpen?'is-active':''} aria-label="筛选账单" aria-expanded={ledgerFiltersOpen} onClick={()=>setLedgerFiltersOpen(v=>!v)}>筛选{ledgerHasFilters?' · 已启用':''}</button><button type="button" aria-label={ledgerView==='calendar'?'切换列表视图':'切换日历视图'} onClick={()=>{if(ledgerView==='calendar'){setLedgerView('list')}else{showCalendar();setLedgerFiltersOpen(false)}}}>{ledgerView==='calendar'?<List size={19}/>:<CalendarDays size={19}/>}</button></div></div>
         {ledgerFiltersOpen && <div className="ledger-v3-panel">
         <div className="ledger-tools">
@@ -610,8 +627,8 @@ export default function App() {
         {ledgerHasFilters && !ledgerFiltersOpen && <div className="ledger-v3-filter-hint"><span>当前已启用筛选 · {filteredEntries.length} 笔</span><button type="button" onClick={clearLedgerFilters}>清除</button></div>}
         {ledgerView==='calendar' ? <><ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={date=>{setCalendarDate(date);setLedgerDate('')}} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>{filteredEntries.length===0 && <p className="calendar-filter-empty" role="status">当前条件下没有账单，可更换月份或清除筛选。</p>}</> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><div className="day-date"><strong>{day.date}</strong><small>{day.entries.length} 笔</small></div><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
 
-      </>}
-      {!budgetOpen && tab === 'stats' && <>
+      </div>}
+      {!budgetOpen && tab === 'stats' && <div key="motion-stats" className="motion-page">
         <div className="stats-v2-heading"><h2>消费分析</h2><span>${monthLabel(month)}</span></div>
         <section className="stats-v2-overview">
           <div className="stats-v2-total"><small>本月总支出</small><strong>¥{money(expenses)}</strong><span>本月收入 ¥{money(income)} · 结余 ¥{money(income-expenses)}</span></div>
@@ -636,8 +653,8 @@ export default function App() {
         </section>
         <div className="section-heading"><h2>消费洞察</h2><span className="meta">本地分析 · 无 AI 费用</span></div>
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
-      </>}
-      {!budgetOpen && tab === 'settings' && <>
+      </div>}
+      {!budgetOpen && tab === 'settings' && <div key="motion-settings" className="motion-page">
         {settingsPage === 'root' ? <>
           <div className="settings-v2-heading"><h2>设置</h2><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div>
           <section className="settings-v2-profile"><div className="settings-v2-brand"><div className="settings-v2-logo"><Wallet size={23}/></div><div><strong>SaveMoney</strong><span>简单记账，清楚生活</span></div><small>本地账本</small></div>
@@ -705,7 +722,7 @@ export default function App() {
           {settingsPage === 'privacy' && <div className="setting-card"><h3>本地优先</h3><p>账单仅保存在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器。</p><h3 className="settings-v2-subheading">请定期备份</h3><p>清除网站数据、卸载应用或更换手机可能导致账本丢失。请在数据管理中导出 JSON 并保存到安全位置。</p><button className="settings-v2-inline-link" onClick={() => openSettingsPage('data')}>前往数据管理 <ChevronRight size={15}/></button></div>}
           {settingsPage === 'about' && <div className="setting-card"><h3>SaveMoney 1.0</h3><p>免费、简洁、本地优先的个人记账工具。</p><p>支持日常记账、分类预算、消费统计及本地备份。</p></div>}
         </>}
-      </>}
+      </div>}
       {budgetOpen && <section className="budget-detail">
         <button type="button" className="back-link" onClick={() => setBudgetOpen(false)}><ChevronLeft size={18}/> 返回首页</button>
         <div className="section-heading"><h2>{monthLabel(month)} · 月度预算</h2></div>
