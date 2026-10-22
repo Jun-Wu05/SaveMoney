@@ -5,6 +5,7 @@ import { db, initializeCategories, removeEntry, saveEntry, type Category, type E
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
 import { addCategory, renameCategory, deleteUnusedCategory } from './categories'
 import { budgetProgress, removeMonthlyBudget, setMonthlyBudget } from './budget'
+import { SpendingDonut } from './SpendingDonut'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -252,7 +253,7 @@ export default function App() {
       {tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
-        {byCategory.length ? byCategory.map(item => <div className="stat-row" key={item.id}><div className="stat-heading"><strong>{categoryName(categoryList,item.id)}</strong><span>¥ {money(item.amount)} · {expenses ? Math.round(item.amount / expenses * 100) : 0}%</span></div><div className="bar-track"><div className="bar-fill" style={{width:`${expenses ? item.amount/expenses*100 : 0}%`}} /></div></div>) : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
+        {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
       </>}
       {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card budget-settings"><h3>{monthLabel(month)} · 月度预算</h3>
         <p>预算只针对当前选择的月份，不会修改任何历史账单。可在首页切换月份查看和调整。</p>
