@@ -183,7 +183,7 @@ function CategoryManager({ categories, initialType = 'expense' }: { categories: 
         }}>删除</button>
       </>}
     </div>)}</div>
-    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(() => addCategory(type,newName),() => setNewName(''))}}>
+    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName) },() => setNewName(''))}}>
       <input aria-label="新分类名称" maxLength={20} placeholder="添加新分类，如 宠物" value={newName} onChange={e => setNewName(e.target.value)}/>
       <button disabled={busy || !newName.trim()} type="submit">添加</button>
     </form>
