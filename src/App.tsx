@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BarChart3, BookOpen, Bus, ChevronLeft, ChevronRight, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase } from 'lucide-react'
+import { BarChart3, BookOpen, Bus, CalendarDays, ChevronLeft, ChevronRight, Delete, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase } from 'lucide-react'
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
 import { addCategory, renameCategory, deleteUnusedCategory } from './categories'
@@ -14,6 +14,8 @@ import { filterEntries } from './ledgerFilters'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 import { downloadExcel } from './excelExport'
+import { ExpenseCalendar } from './ExpenseCalendar'
+import { pressAmountKey, type AmountKey } from './amountKeypad'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
 const nav = [
@@ -54,17 +56,20 @@ function EntryRow({ entry, categories, onEdit }: { entry: Entry; categories: Cat
   </button>
 }
 
-function EntryEditor({ categories, entries, entry, onClose }: { categories: Category[]; entries: Entry[]; entry: Entry | null; onClose: () => void }) {
+function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved, onDeleted }: { categories: Category[]; entries: Entry[]; entry: Entry | null; initialDate?: string; onClose: () => void; onSaved: (message: string) => void; onDeleted: () => void }) {
   const [type, setType] = useState<TransactionType>(entry?.type ?? 'expense')
   const [amount, setAmount] = useState(entry ? (entry.amountMinor / 100).toFixed(2) : '')
   const [categoryId, setCategoryId] = useState(entry?.categoryId ?? '')
-  const [date, setDate] = useState(entry?.date ?? localDay(new Date()))
+  const [date, setDate] = useState(entry?.date ?? initialDate ?? localDay(new Date()))
   const [note, setNote] = useState(entry?.note ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
   const [newCategoryName, setNewCategoryName] = useState('')
   const [categoryBusy, setCategoryBusy] = useState(false)
+  const [customKeypad, setCustomKeypad] = useState(true)
+  const keypadKeys: AmountKey[] = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
+  const applyAmountKey = (key: AmountKey) => { setAmount(current => pressAmountKey(current,key)); setError('') }
   const available = preferredCategories(entries, categories, type)
   const recentCategoryId = lastEntryOfType(entries, type)?.categoryId
   const selected = available.some(c => c.id === categoryId) ? categoryId : (recentCategoryId && available.some(c => c.id === recentCategoryId) ? recentCategoryId : available[0]?.id ?? '')
@@ -83,7 +88,7 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
         id: entry?.id ?? crypto.randomUUID(), type, amountMinor, categoryId: selected,
         date, note: note.trim().slice(0, 200), createdAt: entry?.createdAt ?? timestamp, updatedAt: timestamp,
       })
-      onClose()
+      onSaved(entry ? '修改已保存' : '记账成功，已保存到本机')
     } catch {
       setError('保存失败，请检查设备存储空间')
     } finally { setBusy(false) }
@@ -92,7 +97,7 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
   async function remove() {
     if (!entry || busy || !window.confirm('确定删除这笔记录？删除后无法撤销。')) return
     setBusy(true)
-    try { await removeEntry(entry.id); onClose() }
+    try { await removeEntry(entry.id); onDeleted() }
     catch { setError('删除失败，请重试'); setBusy(false) }
   }
 
@@ -124,7 +129,13 @@ function EntryEditor({ categories, entries, entry, onClose }: { categories: Cate
       <form hidden={categoryView !== 'list'} onSubmit={submit}>
         <div className="type-toggle"><button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setCategoryId('')}}>支出</button><button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setCategoryId('')}}>收入</button></div>
         <label className="amount-label" htmlFor="amount">金额（人民币）</label>
-        <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} onChange={event => setAmount(event.target.value)} autoFocus /></div>
+        <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} readOnly={customKeypad} onChange={event => setAmount(event.target.value)} aria-label="记账金额" /></div>
+        <div className="keypad-mode"><button type="button" onClick={()=>setCustomKeypad(value=>!value)}>{customKeypad?'使用系统键盘':'使用记账数字键盘'}</button></div>
+        {customKeypad && <div className="amount-keypad" role="group" aria-label="记账数字键盘">
+          {keypadKeys.map(key=><button key={key} type="button" className={key==='backspace'?'key-backspace':''}
+            aria-label={key==='backspace'?'删除末位数字':key==='.'?'小数点':`数字${key}`}
+            onClick={()=>applyAmountKey(key)}>{key==='backspace'?<Delete size={22}/>:key}</button>)}
+        </div>}
         {!entry && lastEntryOfType(entries, type) && <button type="button" className="copy-last" onClick={() => {
           const previous = lastEntryOfType(entries, type)!
           setAmount((previous.amountMinor / 100).toFixed(2))
@@ -201,6 +212,10 @@ export default function App() {
   const [allMonths, setAllMonths] = useState(false)
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
+  const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
+  const [ledgerView, setLedgerView] = useState<'list'|'calendar'>('list')
+  const [calendarDate, setCalendarDate] = useState<string | null>(null)
+  const [toast, setToast] = useState('')
   const [initError, setInitError] = useState(false)
   const [pendingBackup, setPendingBackup] = useState<BackupData | null>(null)
   const [backupStatus, setBackupStatus] = useState('')
@@ -209,6 +224,8 @@ export default function App() {
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
   useEffect(() => { const callback = () => setUpdateReady(true); window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
+  useEffect(() => { setCalendarDate(null) }, [month])
+  useEffect(() => { if (!toast) return; const timeout = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(timeout) }, [toast])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
   const currentBudget = useLiveQuery(() => db.budgets.get(month), [month])
   const [budgetInput, setBudgetInput] = useState('')
@@ -231,7 +248,10 @@ export default function App() {
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
   const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>!drilldownIds || drilldownIds.includes(e.categoryId)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds])
   const recent = monthEntries.slice(0, 5)
-  const openEditor = (entry: Entry | 'new') => setEditing(entry)
+  const openEditor = (entry: Entry | 'new', date?: string) => { setNewEntryDate(date); setEditing(entry) }
+  const closeEditor = () => { setEditing(null); setNewEntryDate(undefined) }
+  const notifyChange = (message: string) => { closeEditor(); setToast(message) }
+  const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
   const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next)}
 
@@ -295,6 +315,7 @@ export default function App() {
     <header className="app-header"><div className="brand">SaveMoney<span className="brand-dot">.</span></div><span className="brand-caption">花了多少，心里有数</span></header>
     {updateReady && !editing && !backupBusy && !pendingBackup && <div className="app-update-banner" role="status"><span>发现新版本。请确认当前账单已保存后更新。</span><button onClick={() => window.dispatchEvent(new Event('savemoney-approve-update'))}>立即更新</button></div>}
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
+    {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
       {<div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
       {!budgetOpen && tab === 'home' && <>
@@ -314,18 +335,22 @@ export default function App() {
       </>}
       {!budgetOpen && tab === 'list' && <>
         <div className="section-heading"><h2>账单明细</h2><span className="meta">{filteredEntries.length} 笔</span></div>
+        <div className="ledger-view-switch" role="group" aria-label="账单查看方式">
+          <button type="button" className={ledgerView==='list'?'selected':''} aria-pressed={ledgerView==='list'} onClick={()=>setLedgerView('list')}><List size={16}/> 列表</button>
+          <button type="button" className={ledgerView==='calendar'?'selected':''} aria-pressed={ledgerView==='calendar'} onClick={showCalendar}><CalendarDays size={16}/> 日历</button>
+        </div>
         {drilldownIds && <div className="filter-notice"><span>正在查看选中的消费分类</span><button onClick={()=>setDrilldownIds(null)}>清除分类筛选</button></div>}
         <div className="ledger-tools">
           <input aria-label="搜索账单" placeholder="搜索备注或分类…" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
           <div className="ledger-filters">
             <button className={!allMonths ? 'active' : ''} onClick={()=>setAllMonths(false)}>本月</button>
-            <button className={allMonths ? 'active' : ''} onClick={()=>setAllMonths(true)}>全部月份</button>
+            {ledgerView==='list' && <button className={allMonths ? 'active' : ''} onClick={()=>setAllMonths(true)}>全部月份</button>}
             <button className={filterType==='all'?'active':''} onClick={()=>setFilterType('all')}>全部</button>
             <button className={filterType==='expense'?'active':''} onClick={()=>setFilterType('expense')}>支出</button>
             <button className={filterType==='income'?'active':''} onClick={()=>setFilterType('income')}>收入</button>
           </div>
         </div>
-        {filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><strong>{day.date}</strong><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
+        {ledgerView==='calendar' ? <ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={setCalendarDate} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor}/> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><strong>{day.date}</strong><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
       </>}
       {!budgetOpen && tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
@@ -401,6 +426,6 @@ export default function App() {
       <button className="add-button" aria-label="记一笔" onClick={() => openEditor('new')}><Plus size={25}/></button>
       {nav.slice(2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => goToTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
     </nav>
-    {editing && <EntryEditor key={editing === 'new' ? 'new' : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} onClose={() => setEditing(null)}/>}
+    {editing && <EntryEditor key={editing === 'new' ? 'new' : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} initialDate={newEntryDate} onClose={closeEditor} onSaved={notifyChange} onDeleted={()=>notifyChange('账单已删除')}/>}
   </div>
 }
