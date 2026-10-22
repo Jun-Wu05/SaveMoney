@@ -13,6 +13,7 @@ import { calculateMonthlyReview, reviewSentence } from './monthlyReview'
 import { filterEntries } from './ledgerFilters'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
+import { downloadExcel } from './excelExport'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
 const nav = [
@@ -277,13 +278,14 @@ export default function App() {
     } finally { setBackupBusy(false) }
   }
 
-  async function exportData(kind: 'json' | 'csv') {
+  async function exportData(kind: 'json' | 'csv' | 'xlsx') {
     if (backupBusy) return
     setBackupBusy(true)
     setBackupStatus('')
     try {
       if (kind === 'json') { await downloadBackup(); const at = new Date().toISOString(); localStorage.setItem('savemoney-last-backup-created', at); setLastBackup(at) }
-      else await downloadCsv()
+      else if (kind === 'csv') await downloadCsv()
+      else await downloadExcel()
       setBackupStatus('文件已生成。请确认已保存到 iPhone「文件」App 或 iCloud Drive。')
     } catch { setBackupStatus('导出失败，请检查浏览器权限或设备空间') }
     finally { setBackupBusy(false) }
@@ -341,9 +343,10 @@ export default function App() {
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
       </>}
       {!budgetOpen && tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card"><h3>关于记账功能</h3><p>新增与管理分类请在「记一笔」中操作；预算可以从首页查看和修改。</p></div><div className="setting-card"><h3>备份提醒</h3><p>{lastBackup ? `上次生成 JSON 备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}。请确认文件已保存到 iCloud Drive 或「文件」App。` : '尚未记录生成过 JSON 备份。建议现在导出并保存一份。'} 建议至少每周备份一次。本提示不代表文件已经成功保存。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
-      <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；CSV 仅用于表格查看，不能用于完整恢复。</p>
+      <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；Excel 按月份分 Sheet 并包含汇总，CSV 包含全量账单及总计；仅 JSON 可完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
+          <button disabled={backupBusy} onClick={() => exportData('xlsx')}>导出 Excel（月度分表）</button>
           <button disabled={backupBusy} onClick={() => exportData('csv')}>导出 CSV 账单</button>
         </div>
       </div>

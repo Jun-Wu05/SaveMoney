@@ -14,7 +14,8 @@
     "dexie-react-hooks": "^1.1.7",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "write-excel-file": "^4.1.1"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

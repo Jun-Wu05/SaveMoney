@@ -124,6 +124,12 @@ export async function downloadCsv() {
   for (const e of entries.sort((a, b) => a.date.localeCompare(b.date))) {
     rows.push([e.date, e.type === 'expense' ? '支出' : '收入', (e.amountMinor / 100).toFixed(2), names.get(e.categoryId) ?? '其他', e.note])
   }
+  const incomeMinor = entries.filter(e => e.type === 'income').reduce((total, e) => total + e.amountMinor, 0)
+  const expenseMinor = entries.filter(e => e.type === 'expense').reduce((total, e) => total + e.amountMinor, 0)
+  rows.push(['', '', '', '', ''])
+  rows.push(['全部汇总', '收入合计', (incomeMinor / 100).toFixed(2), '', ''])
+  rows.push(['', '支出合计', (expenseMinor / 100).toFixed(2), '', ''])
+  rows.push(['', '收支结余', ((incomeMinor - expenseMinor) / 100).toFixed(2), '', ''])
   const csv = '\uFEFF' + rows.map(row => row.map(csvSafe).join(',')).join('\r\n')
   download(`SaveMoney-账单-${new Date().toLocaleDateString('sv-SE')}.csv`, csv, 'text/csv;charset=utf-8')
 }
