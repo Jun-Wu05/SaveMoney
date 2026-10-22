@@ -31,7 +31,7 @@ export function parseMonthlyRows(rows: Cell[][], sheet: string): CsvImportPrevie
        (type==='收入' ? income<=0||expense!==0 : expense<=0||income!==0)){
       errors.push({line:i+1,message:`${sheet} 工作表存在无效记录`});continue
     }
-    bills.push({date,type:type==='收入'?'income':'expense',amountMinor:type==='收入'?income:expense,category,note})
+    bills.push({date,type:type==='收入'?'income':'expense',amountMinor:type==='收入'?income!:expense!,category,note})
   }
   return {rows:bills,errors}
 }
