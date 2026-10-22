@@ -374,7 +374,7 @@ export default function App() {
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
-  const [ledgerView, setLedgerView] = useState<'list'|'calendar'>('list')
+  const [ledgerView, setLedgerView] = useState<'list'|'calendar'>('calendar')
   const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [toast, setToast] = useState('')
   const [initError, setInitError] = useState(false)
@@ -523,8 +523,8 @@ export default function App() {
       {!budgetOpen && tab === 'list' && <>
         <div className="section-heading"><h2>账单明细</h2><span className="meta">{filteredEntries.length} 笔</span></div>
         <div className="ledger-view-switch" role="group" aria-label="账单查看方式">
-          <button type="button" className={ledgerView==='list'?'selected':''} aria-pressed={ledgerView==='list'} onClick={()=>setLedgerView('list')}><List size={16}/> 列表</button>
           <button type="button" className={ledgerView==='calendar'?'selected':''} aria-pressed={ledgerView==='calendar'} onClick={showCalendar}><CalendarDays size={16}/> 日历</button>
+          <button type="button" className={ledgerView==='list'?'selected':''} aria-pressed={ledgerView==='list'} onClick={()=>setLedgerView('list')}><List size={16}/> 列表</button>
         </div>
         {drilldownIds && <div className="filter-notice"><span>正在查看选中的消费分类</span><button onClick={()=>setDrilldownIds(null)}>清除分类筛选</button></div>}
         <div className="ledger-tools">
