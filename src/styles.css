@@ -446,3 +446,7 @@
 .category-budget-form>div{display:flex;gap:9px}
 .category-budget-form button{border:0;border-radius:10px;background:#527d66;color:white;padding:11px 15px;font-size:12px}
 .category-budget-form button.category-budget-remove{background:#f6ebe9;color:#aa6057}
+
+.budget-section-links{display:flex;gap:9px;margin:10px 0 15px}
+.budget-section-links a{display:flex;align-items:center;justify-content:center;gap:3px;flex:1;min-height:43px;border:1px solid #e0e8df;border-radius:11px;background:#f4f8f3;color:#466b53;text-decoration:none;font-size:12px;font-weight:650}
+#category-budget-section,#monthly-budget-editor{scroll-margin-top:16px}
