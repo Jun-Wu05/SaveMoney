@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
-import { CalendarDays, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { CalendarDays, Plus, Trash2 } from 'lucide-react'
 import { makeCalendar } from './calendarData'
-import type { Entry, Category } from './db'
+import { removeEntry, type Entry, type Category } from './db'
 import { localDay, money } from './money'
 
 type Props = {
@@ -12,8 +12,19 @@ type Props = {
   onSelectDate: (date: string) => void
   onCreateDate: (date: string) => void
   onEdit: (entry: Entry) => void
+  onDeleted?: () => void
 }
-export function ExpenseCalendar({ month, entries, categories, selectedDate, onSelectDate, onCreateDate, onEdit }: Props) {
+export function ExpenseCalendar({ month, entries, categories, selectedDate, onSelectDate, onCreateDate, onEdit, onDeleted }: Props) {
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  async function deleteOne(entry: Entry) {
+    if (deletingId) return
+    const label = categories.find(c => c.id === entry.categoryId)?.name ?? '其他'
+    if (!window.confirm(`确定删除「${label}」¥${money(entry.amountMinor)} 这笔账单吗？删除后无法恢复。`)) return
+    setDeletingId(entry.id)
+    try { await removeEntry(entry.id); onDeleted?.() }
+    catch { window.alert('删除失败，请重试') }
+    finally { setDeletingId(null) }
+  }
   const today = localDay(new Date())
   const { days, firstWeekday } = useMemo(() => makeCalendar(month, entries), [month, entries])
   const chosen = selectedDate ? days.find(day => day.date === selectedDate) : undefined
@@ -36,9 +47,12 @@ export function ExpenseCalendar({ month, entries, categories, selectedDate, onSe
     {chosen ? <div className="calendar-detail">
       <div className="calendar-detail-title"><div><strong>{chosen.date} · {chosen.count} 笔</strong><small>支出 ¥{money(chosen.expenseMinor)}{chosen.incomeMinor>0?` · 收入 ¥${money(chosen.incomeMinor)}`:''}</small></div>
         <button type="button" onClick={()=>onCreateDate(chosen.date)}><Plus size={16}/> 记这一天</button></div>
-      {transactions.length?transactions.map(entry=><button className="calendar-entry" type="button" onClick={()=>onEdit(entry)} key={entry.id}>
-        <span>{names.get(entry.categoryId)??'其他'}{entry.note?` · ${entry.note}`:''}</span><strong className={entry.type==='income'?'income':''}>{entry.type==='income'?'+':'−'} ¥{money(entry.amountMinor)}</strong>
-      </button>):<p className="calendar-no-entry">这一天还没有账单，可以补记一笔。</p>}
+      {transactions.length?transactions.map(entry=><div className="calendar-entry-wrap" key={entry.id}>
+        <button className="calendar-entry" type="button" onClick={()=>onEdit(entry)} aria-label={`编辑${names.get(entry.categoryId)??'其他'}账单`}>
+          <span>{names.get(entry.categoryId)??'其他'}{entry.note?` · ${entry.note}`:''}</span><strong className={entry.type==='income'?'income':''}>{entry.type==='income'?'+':'−'} ¥{money(entry.amountMinor)}</strong>
+        </button>
+        <button className="calendar-entry-delete" type="button" disabled={deletingId!==null} onClick={()=>void deleteOne(entry)} aria-label={`删除${names.get(entry.categoryId)??'其他'} ${money(entry.amountMinor)}元账单`} title="删除这笔账单"><Trash2 size={17}/></button>
+      </div>):<p className="calendar-no-entry">这一天还没有账单，可以补记一笔。</p>}
     </div>:<p className="calendar-no-entry">选择一天，查看消费记录或补记账单。</p>}
   </section>
 }
