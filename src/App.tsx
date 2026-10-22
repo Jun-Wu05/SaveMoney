@@ -331,9 +331,10 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
         {entry && <button className="delete-button" type="button" disabled={busy} onClick={remove}><Trash2 size={16}/> 删除这笔记录</button>}
       </form>
       {categoryView === 'list' && <footer className="editor-footer">
-        {error && <p className="editor-footer-error" role="alert">{error}</p>}
-        {!entry && <button className="save-again-button" type="submit" form="entry-editor-form" data-action="again" disabled={busy}>保存并继续</button>}
-        <button className="save-button" type="submit" form="entry-editor-form" disabled={busy} aria-busy={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
+        <div className="editor-footer-actions">
+          {!entry && <button className="save-again-button" type="submit" form="entry-editor-form" data-action="again" disabled={busy}>保存并继续</button>}
+          <button className="save-button" type="submit" form="entry-editor-form" disabled={busy} aria-busy={busy}>{busy ? '保存中…' : entry ? '保存修改' : '保存记录'}</button>
+        </div>
       </footer>}
     </section>
   </div>, document.body)
