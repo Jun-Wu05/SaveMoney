@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { BarChart3, BookOpen, Bus, ChevronLeft, ChevronRight, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase } from 'lucide-react'
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
+import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
 const nav = [
@@ -96,6 +97,9 @@ export default function App() {
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [initError, setInitError] = useState(false)
+  const [pendingBackup, setPendingBackup] = useState<BackupData | null>(null)
+  const [backupStatus, setBackupStatus] = useState('')
+  const [backupBusy, setBackupBusy] = useState(false)
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
@@ -110,6 +114,43 @@ export default function App() {
   }, [monthEntries])
   const recent = [...(entries ?? [])].sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0,5)
   const openEditor = (entry: Entry | 'new') => setEditing(entry)
+
+  async function chooseBackup(file?: File) {
+    if (!file) return
+    setBackupStatus('')
+    setPendingBackup(null)
+    if (file.size > 20_000_000) { setBackupStatus('文件过大，拒绝导入'); return }
+    try {
+      const text = await file.text()
+      const backup = validateBackupText(text)
+      setPendingBackup(backup)
+    } catch (error) { setBackupStatus(error instanceof Error ? error.message : '读取备份失败') }
+  }
+
+  async function confirmRestore() {
+    if (!pendingBackup || backupBusy) return
+    if (!window.confirm(`即将用备份中的 ${pendingBackup.entries.length} 笔账单替换当前全部数据。这个操作无法撤销，请先导出当前账本。是否继续？`)) return
+    setBackupBusy(true)
+    try {
+      await restoreBackup(pendingBackup)
+      setPendingBackup(null)
+      setBackupStatus('恢复成功，请检查账单数据')
+    } catch (error) {
+      setBackupStatus(error instanceof Error ? error.message : '恢复失败，原数据未修改')
+    } finally { setBackupBusy(false) }
+  }
+
+  async function exportData(kind: 'json' | 'csv') {
+    if (backupBusy) return
+    setBackupBusy(true)
+    setBackupStatus('')
+    try {
+      if (kind === 'json') await downloadBackup()
+      else await downloadCsv()
+      setBackupStatus('文件已生成。请确认已保存到 iPhone「文件」App 或 iCloud Drive。')
+    } catch { setBackupStatus('导出失败，请检查浏览器权限或设备空间') }
+    finally { setBackupBusy(false) }
+  }
 
   return <div className="app-shell">
     <header className="app-header"><div className="brand">SaveMoney<span className="brand-dot">.</span></div><span className="brand-caption">花了多少，心里有数</span></header>
@@ -127,7 +168,26 @@ export default function App() {
         <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
         {byCategory.length ? byCategory.map(item => <div className="stat-row" key={item.id}><div className="stat-heading"><strong>{categoryName(categoryList,item.id)}</strong><span>¥ {money(item.amount)} · {expenses ? Math.round(item.amount / expenses * 100) : 0}%</span></div><div className="bar-track"><div className="bar-fill" style={{width:`${expenses ? item.amount/expenses*100 : 0}%`}} /></div></div>) : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
       </>}
-      {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>目前是开发预览版，尚未提供备份与恢复。清理 Safari 网站数据、卸载网页 App 或设备损坏可能导致账单永久丢失。请暂勿用于长期保存重要财务记录。</p></div><div className="setting-card"><h3>版本</h3><p>SaveMoney 0.1.0 · 开发预览</p></div></>}
+      {tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
+      <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；CSV 仅用于表格查看，不能用于完整恢复。</p>
+        <div className="action-grid">
+          <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
+          <button disabled={backupBusy} onClick={() => exportData('csv')}>导出 CSV 账单</button>
+        </div>
+      </div>
+      <div className="setting-card"><h3>从备份恢复</h3><p>选择此前导出的 SaveMoney JSON 文件。恢复会替换现有全部账本，操作前请先备份当前数据。</p>
+        <label className="file-label">选择 JSON 备份文件<input type="file" accept="application/json,.json" disabled={backupBusy} onChange={e => {void chooseBackup(e.target.files?.[0]);e.target.value=''}} /></label>
+        {pendingBackup && <div className="restore-preview">
+          <strong>恢复预览</strong>
+          <p>备份时间：{new Date(pendingBackup.exportedAt).toLocaleString('zh-CN')}</p>
+          <p>{pendingBackup.entries.length} 笔记录 · {pendingBackup.categories.length} 个分类</p>
+          <button className="restore-button" disabled={backupBusy} onClick={() => void confirmRestore()}>确认覆盖并恢复</button>
+          <button className="cancel-restore" disabled={backupBusy} onClick={() => setPendingBackup(null)}>取消</button>
+        </div>}
+        {backupStatus && <p className="feedback" role="status">{backupStatus}</p>}
+      </div>
+      <div className="setting-card"><h3>添加到 iPhone 桌面</h3><p>请使用 Safari 打开此网址，点击「分享」→「添加到主屏幕」。首次访问需要联网，之后可离线记账。</p></div>
+      <div className="setting-card"><h3>版本</h3><p>SaveMoney 1.0 · 私人使用版</p></div></>}
     </main>
     <nav className="bottom-nav" aria-label="主导航">
       {nav.slice(0,2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => setTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
