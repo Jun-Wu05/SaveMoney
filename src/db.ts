@@ -21,15 +21,23 @@ export interface Category {
   sortOrder: number
 }
 
+export interface Budget { month: string; amountMinor: number }
+
 class LedgerDb extends Dexie {
   entries!: EntityTable<Entry, 'id'>
   categories!: EntityTable<Category, 'id'>
+  budgets!: EntityTable<Budget, 'month'>
 
   constructor() {
     super('SaveMoneyLedger')
     this.version(1).stores({
       entries: 'id, date, type, categoryId',
       categories: 'id, type, sortOrder',
+    })
+    this.version(2).stores({
+      entries: 'id, date, type, categoryId',
+      categories: 'id, type, sortOrder',
+      budgets: 'month',
     })
   }
 }
