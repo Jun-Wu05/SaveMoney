@@ -664,3 +664,22 @@
   .calendar-day,.calendar-day strong,.calendar-day small,.calendar-entry-delete,.calendar-entry-wrap{transition:none!important}
   .calendar-detail-motion,.calendar-entry-delete.is-deleting svg{animation:none!important}
 }
+
+
+/* Motion V1 D: chart reveal and budget transitions; data labels remain immediate */
+@media(prefers-reduced-motion:no-preference){
+  .motion-chart .daily-trend-card svg{overflow:visible}
+  .daily-trend-card.motion-chart svg rect{transform-box:fill-box;transform-origin:center bottom;animation:sm-daily-bar-rise 400ms cubic-bezier(.2,.8,.2,1) both}
+  @keyframes sm-daily-bar-rise{from{transform:scaleY(.08);opacity:.5}to{transform:scaleY(1);opacity:1}}
+  .motion-trend-line{stroke-dasharray:1;stroke-dashoffset:1;animation:sm-trend-draw 460ms ease-out forwards}
+  @keyframes sm-trend-draw{to{stroke-dashoffset:0}}
+  .motion-trend-point circle{animation:sm-trend-point-in 240ms ease-out both;animation-delay:240ms;transform-box:fill-box;transform-origin:center}
+  @keyframes sm-trend-point-in{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+  .motion-ranking .stats-v2-track i{transform-origin:left center;animation:sm-ranking-fill 350ms ease-out both}
+  @keyframes sm-ranking-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .budget-track .bar-fill,.category-budget-row .bar-fill{transition:width 350ms ease-out,background-color 180ms ease-out}
+}
+@media(prefers-reduced-motion:reduce){
+  .daily-trend-card.motion-chart svg rect,.motion-trend-line,.motion-trend-point circle,.motion-ranking .stats-v2-track i{animation:none!important}
+  .budget-track .bar-fill,.category-budget-row .bar-fill{transition:none!important}
+}
