@@ -584,3 +584,13 @@
 .stats-v2-share{font-size:11px;color:#7d9182;width:42px;text-align:right;flex:none}
 .stats-v2-ranking button>svg{color:#9aaa9e;flex:none}
 @media(max-width:360px){.stats-v2-overview{padding:15px 12px}.stats-v2-metrics>div{padding:0 5px}.stats-v2-metrics strong{font-size:14px}.stats-v2-ranking button{gap:6px;padding:12px 8px}}
+
+/* Data safety V2 */
+.backup-v2-reminder{display:flex;align-items:center;gap:11px;width:100%;margin:12px 0 3px;padding:14px 13px;text-align:left;background:#eaf1e8;border:1px solid #d8e5d7;border-radius:14px;color:#527a60}
+.backup-v2-reminder>span{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.backup-v2-reminder strong{font-size:13px}.backup-v2-reminder small{font-size:11px;line-height:1.5;color:#7b8e7d}
+.backup-v2-compare{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}
+.backup-v2-compare>div{display:flex;flex-direction:column;gap:7px;min-width:0;padding:13px 10px;border-radius:11px;background:#f3f6f1;border:1px solid #e4ebe1}
+.backup-v2-compare small{font-size:11px;color:#7b8d80}.backup-v2-compare strong{font-size:18px;color:#304b39}
+.backup-v2-compare span{font-size:11px;color:#829187}
+.backup-v2-warning{padding:11px 12px;background:#fff1e9;border:1px solid #f3d8c9;border-radius:10px;color:#9d543c!important;font-size:12px;line-height:1.6}
