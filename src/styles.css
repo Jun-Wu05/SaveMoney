@@ -669,7 +669,7 @@
 /* Motion V1 D: chart reveal and budget transitions; data labels remain immediate */
 @media(prefers-reduced-motion:no-preference){
   .motion-chart .daily-trend-card svg{overflow:visible}
-  .daily-trend-card.motion-chart svg rect{transform-box:fill-box;transform-origin:center bottom;animation:sm-daily-bar-rise 400ms cubic-bezier(.2,.8,.2,1) both}
+  .daily-trend-card.motion-chart svg .daily-chart-bar{transform-box:fill-box;transform-origin:center bottom;animation:sm-daily-bar-rise 400ms cubic-bezier(.2,.8,.2,1) both}
   @keyframes sm-daily-bar-rise{from{transform:scaleY(.08);opacity:.5}to{transform:scaleY(1);opacity:1}}
   .motion-trend-line{stroke-dasharray:1;stroke-dashoffset:1;animation:sm-trend-draw 460ms ease-out forwards}
   @keyframes sm-trend-draw{to{stroke-dashoffset:0}}
@@ -680,7 +680,7 @@
   .budget-track .bar-fill,.category-budget-row .bar-fill{transition:width 350ms ease-out,background-color 180ms ease-out}
 }
 @media(prefers-reduced-motion:reduce){
-  .daily-trend-card.motion-chart svg rect,.motion-trend-line,.motion-trend-point circle,.motion-ranking .stats-v2-track i{animation:none!important}
+  .daily-trend-card.motion-chart svg .daily-chart-bar,.motion-trend-line,.motion-trend-point circle,.motion-ranking .stats-v2-track i{animation:none!important}
   .budget-track .bar-fill,.category-budget-row .bar-fill{transition:none!important}
 }
 
@@ -701,3 +701,7 @@
   @keyframes sm-daily-readout{from{opacity:.7}to{opacity:1}}
 }
 @media(prefers-reduced-motion:reduce){.daily-chart-day .daily-chart-bar,.daily-chart-readout{animation:none!important;transition:none!important}}
+
+/* Safari: full chart tap area is stable; decorative rect never shrinks hit targets. */
+.daily-chart-interactive{cursor:pointer;touch-action:pan-y}
+.daily-chart-hit{pointer-events:all}
