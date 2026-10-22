@@ -350,3 +350,12 @@
 .manage-add{flex-wrap:wrap}
 .manage-add .category-icon-picker{flex-basis:100%}
 @media(max-width:360px){.category-icon-picker{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+/* Swipe left to reveal a destructive action without interfering with vertical scrolling. */
+.swipe-entry{position:relative;overflow:hidden;isolation:isolate;border-radius:11px;touch-action:pan-y}
+.swipe-entry-content{position:relative;z-index:1;width:100%;background:#fff;transform:translateX(0);transition:transform .2s ease;touch-action:pan-y}
+.swipe-entry.is-revealed .swipe-entry-content{transform:translateX(-78px)}
+.swipe-delete{position:absolute;z-index:0;right:0;top:0;bottom:0;width:78px;border:0;border-radius:0 11px 11px 0;background:#bd514a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:650;touch-action:manipulation}
+.swipe-delete:focus-visible{outline:2px solid #813b35;outline-offset:-3px}
+.swipe-delete:disabled{opacity:.55}
+@media(prefers-reduced-motion:reduce){.swipe-entry-content{transition:none}}
