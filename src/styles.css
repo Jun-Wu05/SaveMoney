@@ -276,3 +276,30 @@
   .hero{padding:20px 16px}
   .hero-grid{gap:10px}
 }
+
+
+/* SaveMoney 2.0 — phase 2: compact entry form.
+   Deliberately do not override sheet position, height, overflow, or touch behavior. */
+.editor .editor-header{padding-bottom:7px}
+.editor .type-toggle{margin:8px auto 10px}
+.editor .type-toggle button{padding:9px 0}
+.editor .amount-label{font-size:11px;letter-spacing:.02em}
+.editor .money-input{margin:5px 0 10px}
+.editor .money-input input{font-variant-numeric:tabular-nums;font-size:clamp(30px,9vw,36px)}
+.editor .keypad-mode{margin:-5px 1px 7px}
+.editor .keypad-mode button{min-height:36px}
+.editor .amount-keypad{margin:5px 0 10px;gap:6px}
+.editor .amount-keypad button{min-height:43px;border-radius:12px}
+.editor .copy-last{margin:0 0 9px;min-height:39px}
+.editor .section-label{margin:8px 0 10px;font-weight:650}
+.editor .categories{gap:7px}
+.editor .category{min-height:60px;border-radius:12px}
+.editor .manage-category-link{margin-top:5px}
+.editor .form-fields{gap:10px;margin-top:9px}
+.editor .form-fields input{min-height:44px}
+.editor .delete-button{padding-top:12px}
+@media(max-width:360px){
+  .editor .categories{gap:5px}
+  .editor .category{min-height:56px}
+  .editor .amount-keypad button{min-height:42px}
+}
