@@ -450,3 +450,39 @@
 .budget-section-links{display:flex;gap:9px;margin:10px 0 15px}
 .budget-section-links a{display:flex;align-items:center;justify-content:center;gap:3px;flex:1;min-height:43px;border:1px solid #e0e8df;border-radius:11px;background:#f4f8f3;color:#466b53;text-decoration:none;font-size:12px;font-weight:650}
 #category-budget-section,#monthly-budget-editor{scroll-margin-top:16px}
+
+/* Settings V2 */
+.settings-v2-heading{display:flex;align-items:center;justify-content:space-between;margin:9px 0 17px}
+.settings-v2-heading h2{margin:0;font-size:24px;font-weight:750;letter-spacing:-.6px}
+.settings-v2-heading button{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:#fff;color:#527d66}
+.settings-v2-profile{background:#fff;border-radius:18px;padding:17px 16px;margin-bottom:23px}
+.settings-v2-brand{display:flex;align-items:center;gap:11px}
+.settings-v2-logo{width:43px;height:43px;border-radius:13px;display:grid;place-items:center;background:#e7eee7;color:#527d66}
+.settings-v2-brand>div:nth-child(2){display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.settings-v2-brand strong{font-size:15px}
+.settings-v2-brand span{font-size:11px;color:#919a92}
+.settings-v2-brand small{font-size:10px;background:#f0f3ed;color:#788b79;padding:5px 7px;border-radius:12px;white-space:nowrap}
+.settings-v2-stats{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #eff1ec;margin-top:16px;padding-top:14px}
+.settings-v2-stats>div{display:flex;flex-direction:column;gap:5px;padding:0 8px}
+.settings-v2-stats>div+div{border-left:1px solid #eff1ec;padding-left:21px}
+.settings-v2-stats strong{font-size:22px;font-weight:720;color:#303d33;font-variant-numeric:tabular-nums}
+.settings-v2-stats span{font-size:11px;color:#909a91}
+.settings-v2-group-title{font-size:12px;font-weight:650;color:#818b82;margin:0 0 9px 3px}
+.settings-v2-menu{background:#fff;border-radius:16px;padding:0 14px;margin-bottom:23px}
+.settings-v2-menu button{display:flex;align-items:center;gap:12px;width:100%;padding:15px 2px;border:0;border-bottom:1px solid #eff1ec;background:transparent;text-align:left;color:#527d66}
+.settings-v2-menu button:last-child{border-bottom:0}
+.settings-v2-menu button>span{display:flex;flex:1;flex-direction:column;gap:4px}
+.settings-v2-menu strong{font-size:13px;color:#28342c;font-weight:650}
+.settings-v2-menu small{font-size:11px;color:#929b93}
+.settings-v2-menu button>svg:last-child{color:#b3bbb3}
+.settings-v2-footer{text-align:center;font-size:11px;color:#a1a9a1;margin:20px 0 6px}
+.settings-v2-back{display:flex;align-items:center;gap:3px;border:0;background:transparent;color:#527d66;font-size:13px;padding:10px 0}
+.settings-v2-page-title{font-size:22px;letter-spacing:-.5px;margin:16px 0 20px}
+.settings-v2-faq>div{background:#fff;border-radius:14px;padding:17px;margin:0 0 11px}
+.settings-v2-faq h3{font-size:14px;margin:0 0 8px}
+.settings-v2-faq p{font-size:12px;line-height:1.8;color:#7f8980;margin:0}
+.settings-v2-segments{display:flex;gap:8px;margin-top:18px}
+.settings-v2-segments button{flex:1;border:1px solid #e2e9e0;border-radius:10px;padding:12px 8px;background:#f5f7f3;color:#6f7d71;font-size:12px}
+.settings-v2-segments button.selected{background:#527d66;color:white;border-color:#527d66}
+.settings-v2-subheading{margin-top:20px!important}
+.settings-v2-inline-link{display:flex;align-items:center;gap:3px;border:0;background:transparent;color:#527d66;margin-top:15px;padding:0;font-size:12px}
