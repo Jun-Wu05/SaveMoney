@@ -419,7 +419,7 @@ export default function App() {
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
   useEffect(() => { const callback = () => setUpdateReady(true); window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
-  useEffect(() => { setCalendarDate(null); setLedgerDate('') }, [month])
+  useEffect(() => { setCalendarDate(null) }, [month])
   useEffect(() => { if (!toast) return; const timeout = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(timeout) }, [toast])
   const entries = useLiveQuery(() => db.entries.toArray(), [], [])
   const currentBudget = useLiveQuery(() => db.budgets.get(month), [month])
