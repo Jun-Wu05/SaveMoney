@@ -366,3 +366,22 @@
 .swipe-entry.is-dragging .swipe-entry-content{transition:none}
 .swipe-delete{right:3px;top:5px;bottom:5px;width:60px;border-radius:11px;background:#c76b65;font-size:10px;gap:3px}
 @media(prefers-reduced-motion:reduce){.swipe-entry-content{transition:none}}
+
+/* Ledger card redesign: compact, balanced type hierarchy across Home and Ledger. */
+.swipe-entry{margin:0 0 7px;border-radius:13px;background:transparent}
+.swipe-entry-content.entry-row{min-height:74px;padding:12px 13px;gap:11px;border:1px solid #edf0e9;border-radius:13px;background:#fff;box-shadow:0 1px 2px rgba(38,57,42,.025)}
+.swipe-entry .entry-icon{width:42px;height:42px;border-radius:12px;background:#e9eee8;color:#527d66}
+.swipe-entry .entry-info{gap:5px}
+.swipe-entry .entry-info strong{font-size:14px;line-height:1.25;font-weight:620;letter-spacing:-.15px;color:#27372d}
+.swipe-entry .entry-info small{font-size:12px;line-height:1.3;color:#8b948c}
+.swipe-entry .amount{font-size:15px;line-height:1.25;font-weight:650;letter-spacing:-.3px;color:#303b34;font-variant-numeric:tabular-nums}
+.swipe-entry .amount.income{color:#527d66}
+.swipe-entry .swipe-delete{top:6px;bottom:6px}
+.day-group .swipe-entry:last-child{margin-bottom:0}
+@media(max-width:360px){
+  .swipe-entry-content.entry-row{padding:11px 10px;gap:9px;min-height:70px}
+  .swipe-entry .entry-icon{width:39px;height:39px}
+  .swipe-entry .amount{font-size:14px}
+  .swipe-entry .entry-info strong{font-size:13px}
+  .swipe-entry .entry-info small{font-size:11px}
+}
