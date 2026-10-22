@@ -1,5 +1,5 @@
 /* Minimal offline shell for GitHub Pages project site. No external analytics. */
-const CACHE = 'savemoney-shell-v3'
+const CACHE = '__BUILD_CACHE_NAME__'
 const BASE = self.registration.scope
 const PRECACHE = '__PRECACHE_ASSETS__'
 self.addEventListener('install', event => {
@@ -23,11 +23,12 @@ self.addEventListener('fetch', event => {
     }).catch(() => caches.match(BASE)))
     return
   }
-  event.respondWith(caches.match(request).then(hit => hit || fetch(request).then(response => {
+  // Network first for versioned assets: an old active worker must not pin stale UI forever.
+  event.respondWith(fetch(request).then(response => {
     if (response.ok && new URL(request.url).pathname.startsWith(new URL(BASE).pathname)) {
       const copy = response.clone()
       event.waitUntil(caches.open(CACHE).then(cache => cache.put(request, copy)))
     }
     return response
-  })))
+  }).catch(() => caches.match(request)))
 })
