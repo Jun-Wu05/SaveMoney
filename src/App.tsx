@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { blockSheetTouchMove } from './modalGestures'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BarChart3, BookOpen, Bus, CalendarDays, ChevronLeft, ChevronRight, Delete, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase, Coffee, CarFront, Plane, Gamepad2, HeartPulse, PawPrint, Shirt, Smartphone, Music, Dumbbell, PiggyBank } from 'lucide-react'
+import { BarChart3, BookOpen, Bus, CalendarDays, ChevronLeft, ChevronRight, Delete, Ellipsis, Film, Gift, Heart, Home, House, List, Plus, Settings, ShoppingBag, Trash2, Utensils, Wallet, X, Briefcase, Coffee, CarFront, Plane, Gamepad2, HeartPulse, PawPrint, Shirt, Smartphone, Music, Dumbbell, PiggyBank, CircleHelp, DatabaseBackup, ShieldCheck, SlidersHorizontal, Info, LayoutGrid } from 'lucide-react'
 import { db, initializeCategories, removeEntry, saveEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor, sumMinor } from './money'
 import { addCategory, updateCategoryDetails, deleteUnusedCategory } from './categories'
@@ -377,6 +377,8 @@ function CategoryManager({ categories, initialType = 'expense' }: { categories: 
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
+  const [settingsPage, setSettingsPage] = useState<'root'|'data'|'categories'|'preferences'|'help'|'privacy'|'about'>('root')
+  const [defaultLedgerView, setDefaultLedgerView] = useState<'list'|'calendar'>(() => localStorage.getItem('savemoney-default-ledger-view') === 'list' ? 'list' : 'calendar')
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [drilldownIds, setDrilldownIds] = useState<string[] | null>(null)
@@ -386,7 +388,7 @@ export default function App() {
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
   const [copyTemplate, setCopyTemplate] = useState<Entry | null>(null)
-  const [ledgerView, setLedgerView] = useState<'list'|'calendar'>('calendar')
+  const [ledgerView, setLedgerView] = useState<'list'|'calendar'>(() => localStorage.getItem('savemoney-default-ledger-view') === 'list' ? 'list' : 'calendar')
   const [calendarDate, setCalendarDate] = useState<string | null>(null)
   const [toast, setToast] = useState('')
   const [initError, setInitError] = useState(false)
@@ -439,7 +441,8 @@ export default function App() {
   const notifyChange = (message: string) => { closeEditor(); setToast(message) }
   const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
-  const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next)}
+  const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next);if(next === 'settings')setSettingsPage('root');if(next === 'list')setLedgerView(defaultLedgerView);window.scrollTo(0,0)}
+  const openSettingsPage = (page: typeof settingsPage) => {setSettingsPage(page);window.scrollTo(0,0)}
 
   async function saveCategoryBudgetForm(event: React.FormEvent) {
     event.preventDefault()
@@ -603,7 +606,27 @@ export default function App() {
         <div className="section-heading"><h2>消费洞察</h2><span className="meta">本地分析 · 无 AI 费用</span></div>
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
       </>}
-      {!budgetOpen && tab === 'settings' && <><div className="section-heading"><h2>设置</h2></div><div className="setting-card"><h3>本地独立记账</h3><p>所有账单仅存储在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器，与你的朋友互不共享。</p></div><div className="setting-card"><h3>关于记账功能</h3><p>新增与管理分类请在「记一笔」中操作；预算可以从首页查看和修改。</p></div><div className="setting-card"><h3>备份提醒</h3><p>{lastBackup ? `上次生成 JSON 备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}。请确认文件已保存到 iCloud Drive 或「文件」App。` : '尚未记录生成过 JSON 备份。建议现在导出并保存一份。'} 建议至少每周备份一次。本提示不代表文件已经成功保存。</p></div><div className="setting-card warning"><h3>数据安全提醒</h3><p>本地数据可能被系统或浏览器清除。建议每周备份，并将 JSON 文件保存至「文件」App 或 iCloud Drive。更换手机不会自动同步账单。</p></div>
+      {!budgetOpen && tab === 'settings' && <>
+        {settingsPage === 'root' ? <>
+          <div className="settings-v2-heading"><h2>设置</h2><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div>
+          <section className="settings-v2-profile"><div className="settings-v2-brand"><div className="settings-v2-logo"><Wallet size={23}/></div><div><strong>SaveMoney</strong><span>简单记账，清楚生活</span></div><small>本地账本</small></div>
+          <div className="settings-v2-stats"><div><strong>{(entries ?? []).length}</strong><span>累计账单</span></div><div><strong>{new Set((entries ?? []).map(e => e.date)).size} 天</strong><span>记账天数</span></div></div></section>
+          <div className="settings-v2-group-title">账本管理</div>
+          <section className="settings-v2-menu">
+            <button onClick={() => openSettingsPage('categories')}><LayoutGrid size={19}/><span><strong>分类管理</strong><small>支出与收入分类</small></span><ChevronRight size={17}/></button>
+            <button onClick={() => openSettingsPage('data')}><DatabaseBackup size={19}/><span><strong>数据管理</strong><small>备份、恢复与导入导出</small></span><ChevronRight size={17}/></button>
+            <button onClick={() => openSettingsPage('preferences')}><SlidersHorizontal size={19}/><span><strong>记账偏好</strong><small>账单默认显示方式</small></span><ChevronRight size={17}/></button>
+          </section>
+          <div className="settings-v2-group-title">应用</div>
+          <section className="settings-v2-menu">
+            <button onClick={() => openSettingsPage('privacy')}><ShieldCheck size={19}/><span><strong>隐私与数据安全</strong></span><ChevronRight size={17}/></button>
+            <button onClick={() => openSettingsPage('about')}><Info size={19}/><span><strong>关于 SaveMoney</strong></span><ChevronRight size={17}/></button>
+          </section><p className="settings-v2-footer">SaveMoney · 免费 · 本地优先</p>
+        </> : <>
+          <button className="settings-v2-back" type="button" onClick={() => openSettingsPage('root')}><ChevronLeft size={19}/> 返回设置</button>
+          <h2 className="settings-v2-page-title">{{data:'数据管理',categories:'分类管理',preferences:'记账偏好',help:'帮助中心',privacy:'隐私与数据安全',about:'关于 SaveMoney'}[settingsPage]}</h2>
+          {settingsPage === 'data' && <>
+            <div className="setting-card"><h3>备份状态</h3><p>{lastBackup ? `上次生成备份：${new Date(lastBackup).toLocaleDateString('zh-CN')}` : '尚未生成完整备份'}</p><p>建议每周备份，并确认文件已保存到「文件」或 iCloud Drive。</p></div>
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；Excel 按月份分 Sheet 并包含汇总，CSV 包含全量账单及总计；仅 JSON 可完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
@@ -634,8 +657,21 @@ export default function App() {
         </div>}
         {backupStatus && <p className="feedback" role="status">{backupStatus}</p>}
       </div>
-      <div className="setting-card"><h3>添加到 iPhone 桌面</h3><p>请使用 Safari 打开此网址，点击「分享」→「添加到主屏幕」。首次访问需要联网，之后可离线记账。</p></div>
-      <div className="setting-card"><h3>版本</h3><p>SaveMoney 1.0 · 私人使用版</p></div></>}
+
+          </>}
+          {settingsPage === 'categories' && <CategoryManager categories={categoryList}/>}
+          {settingsPage === 'preferences' && <div className="setting-card"><h3>账单默认视图</h3><p>下次进入账单页面时优先显示的方式。</p><div className="settings-v2-segments"><button className={defaultLedgerView === 'calendar' ? 'selected' : ''} onClick={() => {setDefaultLedgerView('calendar');setLedgerView('calendar');localStorage.setItem('savemoney-default-ledger-view','calendar')}}>日历视图</button><button className={defaultLedgerView === 'list' ? 'selected' : ''} onClick={() => {setDefaultLedgerView('list');setLedgerView('list');localStorage.setItem('savemoney-default-ledger-view','list')}}>列表视图</button></div></div>}
+          {settingsPage === 'help' && <div className="settings-v2-faq">
+            <div><h3>如何新增账单？</h3><p>点击底部中央「+」，选择收支类型、分类和金额后保存。</p></div>
+            <div><h3>如何设置预算？</h3><p>首页进入「月度预算」，可设置总预算及各分类预算。</p></div>
+            <div><h3>数据保存在哪里？</h3><p>账单保存在当前设备的浏览器本地数据库，不会自动同步到其他设备。</p></div>
+            <div><h3>更换手机怎么恢复？</h3><p>先到「数据管理」导出完整 JSON 备份，在新手机的「数据管理」中选择 JSON 恢复。恢复会覆盖当前账本。</p></div>
+            <div><h3>如何添加到 iPhone 桌面？</h3><p>使用 Safari 打开 SaveMoney，点击分享按钮，选择「添加到主屏幕」。</p></div>
+          </div>}
+          {settingsPage === 'privacy' && <div className="setting-card"><h3>本地优先</h3><p>账单仅保存在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器。</p><h3 className="settings-v2-subheading">请定期备份</h3><p>清除网站数据、卸载应用或更换手机可能导致账本丢失。请在数据管理中导出 JSON 并保存到安全位置。</p><button className="settings-v2-inline-link" onClick={() => openSettingsPage('data')}>前往数据管理 <ChevronRight size={15}/></button></div>}
+          {settingsPage === 'about' && <div className="setting-card"><h3>SaveMoney 1.0</h3><p>免费、简洁、本地优先的个人记账工具。</p><p>支持日常记账、分类预算、消费统计及本地备份。</p></div>}
+        </>}
+      </>}
       {budgetOpen && <section className="budget-detail">
         <button type="button" className="back-link" onClick={() => setBudgetOpen(false)}><ChevronLeft size={18}/> 返回首页</button>
         <div className="section-heading"><h2>{monthLabel(month)} · 月度预算</h2></div>
