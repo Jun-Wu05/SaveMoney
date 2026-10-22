@@ -507,3 +507,20 @@
 .ledger-advanced-filters input,.ledger-advanced-filters select{display:block;width:100%;max-width:100%;min-width:0;height:44px;padding:0 9px;border:1px solid #e1e7df;border-radius:11px;background:#fff;color:#334438;font-size:16px}
 .ledger-advanced-filters select{font-size:14px;text-overflow:ellipsis}
 @media(max-width:360px){.ledger-advanced-filters{gap:7px}.ledger-advanced-filters input,.ledger-advanced-filters select{padding:0 6px}}
+
+/* Ledger calendar-first layout */
+.app-header{padding-top:max(calc(23px + env(safe-area-inset-top)),72px)}
+.ledger-v3-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px}
+.ledger-v3-heading h2{margin:0;font-size:17px;letter-spacing:-.2px}
+.ledger-v3-actions{display:flex;align-items:center;gap:8px}
+.ledger-v3-actions button{border:1px solid #e2e9df;background:#fff;color:#55765f;border-radius:11px;min-height:38px;padding:0 12px;display:flex;align-items:center;justify-content:center;font-size:12px;white-space:nowrap}
+.ledger-v3-actions button.is-active{background:#e5eee5;border-color:#b8d1bc}
+.ledger-v3-actions button:last-child{width:40px;padding:0}
+.ledger-v3-panel{background:#fff;border:1px solid #e6ebe3;border-radius:16px;padding:13px;margin-bottom:16px}
+.ledger-v3-panel .ledger-tools{margin:0}
+.ledger-v3-panel .ledger-advanced-filters{margin-top:11px}
+.ledger-v3-reset{border:0;background:#eaf1e9;color:#527d66;padding:10px 14px;border-radius:10px;font-size:12px;margin-top:12px}
+.ledger-v3-filter-hint{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;margin-bottom:12px;border-radius:11px;background:#eaf1e9;color:#527d66;font-size:12px}
+.ledger-v3-filter-hint button{border:0;background:transparent;color:#527d66;font-weight:650}
+.ledger-v3-heading + .expense-calendar,.ledger-v3-filter-hint + .expense-calendar{margin-top:0}
+@media(max-width:360px){.app-header{padding-top:max(calc(23px + env(safe-area-inset-top)),65px)}.ledger-v3-actions{gap:5px}}
