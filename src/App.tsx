@@ -607,16 +607,20 @@ export default function App() {
 
       </>}
       {!budgetOpen && tab === 'stats' && <>
-        <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
-        <div className="section-heading"><h2>支出分类</h2><span className="meta">按金额排序</span></div>
-        {byCategory.length ? <SpendingDonut key={month} items={byCategory.map(item => ({ id: item.id, name: categoryName(categoryList, item.id), amount: item.amount }))} onOpenCategory={openCategoryBills} /> : <div className="empty"><BarChart3 size={30}/><strong>暂无支出数据</strong><span>记账后就能看到分类统计</span></div>}
-        <div className="section-heading"><h2>每日消费趋势</h2><span className="meta">{monthLabel(month)} · 按天统计</span></div>
-        <DailySpendingChart summary={dailySummary} />
-        <section className="daily-summary-grid">
-          <div><small>日均支出</small><strong>¥{money(dailySummary.averageMinor)}</strong><span>按 {dailySummary.comparedDays} 天计算</span></div>
-          <div><small>最高消费日</small><strong>{dailySummary.peakDay ? `${dailySummary.peakDay} 日` : '暂无'}</strong><span>{dailySummary.peakDay ? `¥${money(dailySummary.peakMinor)}` : '没有支出记录'}</span></div>
-          <div className="daily-compare"><small>上月同期对比</small><strong>{dailySummary.percentChange === null ? '—' : `${dailySummary.percentChange > 0 ? '+' : ''}${dailySummary.percentChange.toFixed(1)}%`}</strong><span>本期 ¥{money(dailySummary.totalMinor)} · 上期 ¥{money(dailySummary.previousMinor)}</span><span>对比前 {dailySummary.comparedDays} 天（上月最多 {dailySummary.previousDays} 天）{dailySummary.percentChange === null ? ' · 上期为零，无法计算百分比' : ''}</span></div>
+        <div className="stats-v2-heading"><h2>消费分析</h2><span>${monthLabel(month)}</span></div>
+        <section className="stats-v2-overview">
+          <div className="stats-v2-total"><small>本月总支出</small><strong>¥{money(expenses)}</strong><span>本月收入 ¥{money(income)} · 结余 ¥{money(income-expenses)}</span></div>
+          <div className="stats-v2-metrics">
+            <div><small>日均支出</small><strong>¥{money(dailySummary.averageMinor)}</strong><span>按 {dailySummary.comparedDays} 天</span></div>
+            <div><small>最高消费日</small><strong>{dailySummary.peakDay ? `${dailySummary.peakDay} 日` : '暂无'}</strong><span>{dailySummary.peakDay ? `¥${money(dailySummary.peakMinor)}` : '暂无记录'}</span></div>
+            <div><small>上月同期</small><strong className={dailySummary.percentChange !== null && dailySummary.percentChange > 0 ? 'stats-v2-up' : ''}>{dailySummary.percentChange === null ? '—' : `${dailySummary.percentChange>0?'+':''}${dailySummary.percentChange.toFixed(1)}%`}</strong><span>{dailySummary.percentChange === null ? '上期为零，无法比较' : dailySummary.percentChange > 0 ? '支出增加' : dailySummary.percentChange < 0 ? '支出减少' : '支出持平'}</span></div>
+          </div>
         </section>
+        <div className="section-heading"><h2>每日消费趋势</h2><span className="meta">前 {dailySummary.comparedDays} 天 · 对比上月同期</span></div>
+        <DailySpendingChart summary={dailySummary} />
+        <div className="stats-v2-compare">本期 ¥{money(dailySummary.totalMinor)} <span>上期 ¥{money(dailySummary.previousMinor)}</span></div>
+        <div className="section-heading"><h2>分类消费排行</h2><span className="meta">点击分类查看账单</span></div>
+        {byCategory.length ? <div className="stats-v2-ranking">{byCategory.map((item,index)=><button type="button" key={item.id} onClick={()=>openCategoryBills([item.id])}><span className="stats-v2-rank">{index+1}</span><span className="stats-v2-rank-main"><span className="stats-v2-rank-title"><strong>{categoryName(categoryList,item.id)}</strong><b>¥{money(item.amount)}</b></span><span className="stats-v2-track"><i style={{width:`${expenses>0?item.amount/expenses*100:0}%`}}/></span></span><span className="stats-v2-share">{expenses>0?(item.amount/expenses*100).toFixed(1):'0.0'}%</span><ChevronRight size={14}/></button>)}</div> : <div className="empty"><BarChart3 size={26}/><strong>暂无支出数据</strong><span>记账后即可查看分类排行</span></div>}
         <div className="section-heading"><h2>近 6 个月支出趋势</h2><span className="meta">截至所选月份</span></div>
         <SpendingTrend points={trend} />
         <div className="section-heading"><h2>月度回顾</h2><span className="meta">{monthLabel(month)}</span></div>
