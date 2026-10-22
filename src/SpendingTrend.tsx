@@ -10,11 +10,11 @@ export function SpendingTrend({ points }: { points: MonthlyPoint[] }) {
     ...p,
   }))
   const line = coords.map((p, i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ')
-  return <section className="trend-card">
+  return <section className="trend-card motion-chart">
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="最近六个月支出趋势折线图">
       <line x1="18" x2="302" y1={bottom} y2={bottom} stroke="#dce4db" />
-      <path d={line} fill="none" stroke="#527d66" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-      {coords.map(p => <g key={p.month}>
+      <path className="motion-trend-line" pathLength={1} d={line} fill="none" stroke="#527d66" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      {coords.map(p => <g key={p.month} className="motion-trend-point">
         <circle cx={p.x} cy={p.y} r="5" fill="#527d66" stroke="#fff" strokeWidth="2">
           <title>{p.month}：¥{money(p.expenseMinor)}</title>
         </circle>
