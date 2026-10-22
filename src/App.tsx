@@ -83,6 +83,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
   const [busy, setBusy] = useState(false)
   const [categoryView, setCategoryView] = useState<'list' | 'new' | 'manage'>('list')
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryIcon, setNewCategoryIcon] = useState('ellipsis')
   const [categoryBusy, setCategoryBusy] = useState(false)
   const [customKeypad, setCustomKeypad] = useState(true)
   const keypadKeys: AmountKey[] = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
@@ -192,7 +193,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
     setCategoryBusy(true)
     setError('')
     try {
-      const id = await addCategory(type, newCategoryName)
+      const id = await addCategory(type, newCategoryName, newCategoryIcon)
       setCategoryId(id)
       setNewCategoryName('')
       setCategoryView('list')
@@ -207,6 +208,7 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
         <p>新增{type === 'expense' ? '支出' : '收入'}分类，完成后将自动选中；已填写的金额、日期和备注都会保留。</p>
         <label htmlFor="new-category-name">分类名称</label>
         <input id="new-category-name" maxLength={20} autoFocus placeholder="例如：宠物、旅行" value={newCategoryName} onChange={event => setNewCategoryName(event.target.value)}/>
+        <label>选择图标</label><IconPicker value={newCategoryIcon} onChange={setNewCategoryIcon}/>
         {error && <p className="error" role="alert">{error}</p>}
         <button className="save-button" disabled={!newCategoryName.trim() || categoryBusy} type="submit">{categoryBusy ? '添加中…' : '添加并选中'}</button>
       </form>}
@@ -245,8 +247,10 @@ function EntryEditor({ categories, entries, entry, initialDate, onClose, onSaved
 function CategoryManager({ categories, initialType = 'expense' }: { categories: Category[]; initialType?: TransactionType }) {
   const [type, setType] = useState<TransactionType>(initialType)
   const [newName, setNewName] = useState('')
+  const [newIcon, setNewIcon] = useState('ellipsis')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editIcon, setEditIcon] = useState('ellipsis')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -271,20 +275,22 @@ function CategoryManager({ categories, initialType = 'expense' }: { categories: 
     <div className="manage-list">{shown.map(category => <div className="manage-category" key={category.id}>
       {editingId === category.id ? <>
         <input aria-label="编辑分类名称" maxLength={20} value={editName} onChange={e => setEditName(e.target.value)}/>
-        <button type="button" disabled={busy} onClick={() => void perform(() => renameCategory(category.id,editName),() => setEditingId(null))}>保存</button>
+        <IconPicker value={editIcon} onChange={setEditIcon}/>
+        <button type="button" disabled={busy} onClick={() => void perform(() => updateCategoryDetails(category.id,editName,editIcon),() => setEditingId(null))}>保存</button>
         <button type="button" disabled={busy} onClick={() => setEditingId(null)}>取消</button>
       </> : <>
         <span>{category.name}</span>
-        <button type="button" disabled={busy} onClick={() => {setEditingId(category.id);setEditName(category.name);setError('')}}>改名</button>
+        <button type="button" disabled={busy} onClick={() => {setEditingId(category.id);setEditName(category.name);setEditIcon(category.icon);setError('')}}>编辑</button>
         <button type="button" disabled={busy} onClick={() => {
           if (window.confirm(`确定删除「${category.name}」？已有账单的分类无法删除。`))
             void perform(() => deleteUnusedCategory(category.id))
         }}>删除</button>
       </>}
     </div>)}</div>
-    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName) },() => setNewName(''))}}>
+    <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName,newIcon) },() => {setNewName('');setNewIcon('ellipsis')})}}>
       <input aria-label="新分类名称" maxLength={20} placeholder="添加新分类，如 宠物" value={newName} onChange={e => setNewName(e.target.value)}/>
       <button disabled={busy || !newName.trim()} type="submit">添加</button>
+      <IconPicker value={newIcon} onChange={setNewIcon}/>
     </form>
     {error && <p className="error" role="alert">{error}</p>}
   </div>
