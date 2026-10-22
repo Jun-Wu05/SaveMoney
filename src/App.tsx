@@ -214,7 +214,14 @@ function EntryEditor({ categories, entries, entry, template, initialDate, onClos
     const onFocusIn = (event: FocusEvent) => {
       const target = event.target
       if (!(target instanceof HTMLElement) || !target.closest('.editor-scroller')) return
-      window.setTimeout(() => target.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 220)
+      window.setTimeout(() => {
+        const scroller = target.closest<HTMLElement>('.editor-scroller')
+        if (!scroller || !target.isConnected) return
+        const inputRect = target.getBoundingClientRect()
+        const areaRect = scroller.getBoundingClientRect()
+        if (inputRect.bottom > areaRect.bottom - 12) scroller.scrollTop += inputRect.bottom - areaRect.bottom + 12
+        else if (inputRect.top < areaRect.top + 12) scroller.scrollTop -= areaRect.top - inputRect.top + 12
+      }, 220)
     }
     overlay?.addEventListener('focusin', onFocusIn)
     syncViewport()
