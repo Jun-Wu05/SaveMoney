@@ -400,6 +400,8 @@ export default function App() {
   const [drilldownIds, setDrilldownIds] = useState<string[] | null>(null)
   const [filterType, setFilterType] = useState<TransactionType | 'all'>('all')
   const [allMonths, setAllMonths] = useState(false)
+  const [ledgerDate, setLedgerDate] = useState('')
+  const [ledgerCategory, setLedgerCategory] = useState('')
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
@@ -445,17 +447,18 @@ export default function App() {
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
   const dailySummary = useMemo(() => dailySpendingSummary(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
-  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>!drilldownIds || drilldownIds.includes(e.categoryId)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds])
+  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterType,month:allMonths?null:month}).filter(e=>(!drilldownIds || drilldownIds.includes(e.categoryId)) && (!ledgerCategory || e.categoryId === ledgerCategory) && (!ledgerDate || e.date === ledgerDate)), [entries,categoryList,searchTerm,filterType,allMonths,month,drilldownIds,ledgerCategory,ledgerDate])
   const ledgerExpense = sumMinor(filteredEntries, 'expense')
   const ledgerIncome = sumMinor(filteredEntries, 'income')
-  const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterType !== 'all' || allMonths)
-  const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterType('all'); setAllMonths(false) }
+  const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterType !== 'all' || allMonths || ledgerDate || ledgerCategory)
+  const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterType('all'); setAllMonths(false); setLedgerDate(''); setLedgerCategory(''); setCalendarDate(null) }
+  const jumpToLedgerDate = (date: string) => { setLedgerDate(date); if (date) { setMonth(date.slice(0,7)); setAllMonths(false); setCalendarDate(date) } else setCalendarDate(null) }
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new', date?: string) => { setCopyTemplate(null); setNewEntryDate(date); setEditing(entry) }
   const duplicateEntry = (entry: Entry) => { setCopyTemplate(entry); setNewEntryDate(undefined); setEditing('new') }
   const closeEditor = () => { setEditing(null); setNewEntryDate(undefined); setCopyTemplate(null) }
   const notifyChange = (message: string) => { closeEditor(); setToast(message) }
-  const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(null) }
+  const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(ledgerDate || null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
   const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next);if(next === 'settings')setSettingsPage('root');if(next === 'list')setLedgerView(defaultLedgerView);window.scrollTo(0,0)}
   const openSettingsPage = (page: typeof settingsPage) => {setSettingsPage(page);window.scrollTo(0,0)}
@@ -561,7 +564,7 @@ export default function App() {
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
-      {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => setMonth(adjustMonth(month, -1))}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => setMonth(adjustMonth(month, 1))}><ChevronRight size={20}/></button></div>}
+      {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
       {!budgetOpen && tab === 'home' && <>
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
         <div className="section-heading home-section-heading"><h2>消费都花在哪了</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
@@ -588,17 +591,21 @@ export default function App() {
           <input aria-label="搜索账单" placeholder="搜索备注或分类…" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} />
           <div className="ledger-filters">
             <button className={!allMonths ? 'active' : ''} onClick={()=>setAllMonths(false)}>本月</button>
-            {ledgerView==='list' && <button className={allMonths ? 'active' : ''} onClick={()=>setAllMonths(true)}>全部月份</button>}
+            {ledgerView==='list' && <button className={allMonths ? 'active' : ''} onClick={()=>{setAllMonths(true);setLedgerDate('')}}>全部月份</button>}
             <button className={filterType==='all'?'active':''} onClick={()=>setFilterType('all')}>全部</button>
-            <button className={filterType==='expense'?'active':''} onClick={()=>setFilterType('expense')}>支出</button>
-            <button className={filterType==='income'?'active':''} onClick={()=>setFilterType('income')}>收入</button>
+            <button className={filterType==='expense'?'active':''} onClick={()=>{setFilterType('expense');if(categoryList.find(c=>c.id===ledgerCategory)?.type==='income')setLedgerCategory('')}}>支出</button>
+            <button className={filterType==='income'?'active':''} onClick={()=>{setFilterType('income');if(categoryList.find(c=>c.id===ledgerCategory)?.type==='expense')setLedgerCategory('')}}>收入</button>
+          </div>
+          <div className="ledger-advanced-filters">
+            <label><span>快速定位日期</span><input aria-label="定位账单日期" type="date" value={ledgerDate} onChange={e=>jumpToLedgerDate(e.target.value)}/></label>
+            <label><span>按分类筛选</span><select aria-label="筛选账单分类" value={ledgerCategory} onChange={e=>setLedgerCategory(e.target.value)}><option value="">全部分类</option>{categoryList.filter(c=>filterType==='all'||c.type===filterType).map(c=><option key={c.id} value={c.id}>{c.type==='income'?'收入 · ':'支出 · '}{c.name}</option>)}</select></label>
           </div>
         </div>
         <div className="ledger-result-summary" role="status" aria-live="polite">
           <div><span>{ledgerHasFilters ? '筛选结果' : '账单汇总'} · {filteredEntries.length} 笔</span><strong>支出 ¥{money(ledgerExpense)} <em>收入 ¥{money(ledgerIncome)}</em></strong></div>
           {ledgerHasFilters && <button type="button" onClick={clearLedgerFilters}>清除筛选</button>}
         </div>
-        {ledgerView==='calendar' ? <><ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={setCalendarDate} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor}/>{filteredEntries.length===0 && <p className="calendar-filter-empty" role="status">当前条件下没有账单，可更换月份或清除筛选。</p>}</> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><div className="day-date"><strong>{day.date}</strong><small>{day.entries.length} 笔</small></div><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
+        {ledgerView==='calendar' ? <><ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={date=>{setCalendarDate(date);setLedgerDate('')}} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor}/>{filteredEntries.length===0 && <p className="calendar-filter-empty" role="status">当前条件下没有账单，可更换月份或清除筛选。</p>}</> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><div className="day-date"><strong>{day.date}</strong><small>{day.entries.length} 笔</small></div><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
       </>}
       {!budgetOpen && tab === 'stats' && <>
         <div className="stats-summary"><span>本月支出</span><h1>¥ {money(expenses)}</h1><div>收入 ¥ {money(income)} · 结余 ¥ {money(income - expenses)}</div></div>
