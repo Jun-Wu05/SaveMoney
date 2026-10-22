@@ -539,3 +539,18 @@
 .calendar-detail-title>div{flex:1;min-width:0}
 .calendar-detail-title strong,.calendar-detail-title small{display:block;overflow-wrap:anywhere}
 @media(max-width:360px){.calendar-day{height:58px;min-height:58px;max-height:58px;padding:7px 1px 5px}}
+
+/* Home V2: budget-first overview, actionable top spending categories */
+.home-v2-budget-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:23px 0 0}
+.home-v2-budget-heading h2{font-size:16px;margin:0;font-weight:700}
+.home-v2-budget-heading span{font-size:11px;color:#8c978d;white-space:nowrap}
+.home-v2-budget-heading + .budget-card{margin-top:11px}
+.home-v2-top3{display:grid;gap:0;background:#fff;border:1px solid #e8ede6;border-radius:15px;overflow:hidden;margin-top:10px}
+.home-v2-top3 button{display:flex;align-items:center;gap:10px;min-width:0;min-height:43px;padding:10px 13px;background:transparent;border:0;border-bottom:1px solid #f0f2ec;text-align:left;color:#36463b}
+.home-v2-top3 button:last-child{border-bottom:0}
+.home-v2-rank{display:grid;place-items:center;flex:none;width:21px;height:21px;background:#eaf1e8;border-radius:7px;color:#527d66;font-size:11px;font-weight:700}
+.home-v2-category{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.home-v2-top3 strong{font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.home-v2-top3 small{color:#7b8f80;font-size:11px;width:36px;text-align:right;white-space:nowrap}
+.home-v2-top3 + .donut-compact{margin-top:10px}
+@media(max-width:360px){.home-v2-top3 button{gap:6px;padding:9px}.home-v2-top3 small{width:30px}}
