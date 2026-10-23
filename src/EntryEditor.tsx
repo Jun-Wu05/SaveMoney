@@ -229,8 +229,7 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
       <form id="entry-editor-form" className="editor-scroller entry-editor-form" hidden={categoryView !== 'list'} onSubmit={submit}>
         <div className="type-toggle"><button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setCategoryId('')}}>支出</button><button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setCategoryId('')}}>收入</button></div>
         <label className="amount-label" htmlFor="amount">金额（人民币）</label>
-        <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} readOnly={customKeypad} onChange={event => {setAmount(event.target.value);setError('')}} aria-label="记账金额" /></div>
-        {pendingCalc && <p className="amount-calc-expression" role="status" aria-live="polite">¥{money(pendingCalc.baseMinor)} {pendingCalc.operator} {amount}</p>}
+        <div className={`money-input ${pendingCalc ? 'money-input-calculating' : ''}`}><span>¥</span>{pendingCalc && <span className="amount-inline-base">{money(pendingCalc.baseMinor)} {pendingCalc.operator}</span>}<input id="amount" inputMode="decimal" autoComplete="off" placeholder={pendingCalc ? "0" : "0.00"} value={amount} readOnly={customKeypad} onChange={event => {setAmount(event.target.value);setError('')}} aria-label={pendingCalc ? "当前计算数字" : "记账金额"} /></div>
         <div className="keypad-mode"><button type="button" onClick={()=>setCustomKeypad(value=>!value)}>{customKeypad?'使用系统键盘':'使用记账数字键盘'}</button></div>
         {customKeypad && <div className="amount-keypad amount-keypad-calc" role="group" aria-label="带加减运算的记账数字键盘">
           {keypadKeys.map((key,index)=><div className="amount-keypad-digit" key={key} style={{gridColumn: (index%3)+1, gridRow: Math.floor(index/3)+1}}>
