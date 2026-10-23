@@ -14,3 +14,12 @@ export function calculateAmount(pending: CalcPending, input: string): CalcResult
   if (whole > 999_999_999) return { error: '计算结果超出输入范围' }
   return { amountMinor: result, display: (result / 100).toFixed(2) }
 }
+
+/** Finalize an entry even if an operator is pending without a right-hand amount. */
+export function finalizeAmount(pending: CalcPending, input: string): CalcResult {
+  if (pending && input.trim() === '') return {
+    amountMinor: pending.baseMinor,
+    display: (pending.baseMinor / 100).toFixed(2),
+  }
+  return calculateAmount(pending, input)
+}
