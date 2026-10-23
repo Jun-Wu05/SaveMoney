@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Delete, Ellipsis, Plus, Trash2, X } from 'lu
 import { blockSheetTouchMove } from './modalGestures'
 import { saveEntry, removeEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor } from './money'
-import { addCategory, updateCategoryDetails, deleteUnusedCategory } from './categories'
+import { addCategory } from './categories'
 import { pressAmountKey, type AmountKey } from './amountKeypad'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { icons, IconPicker } from './categoryIcons'
