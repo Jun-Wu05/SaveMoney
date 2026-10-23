@@ -138,7 +138,7 @@ export default function App() {
   const [filterTypes, setFilterTypes] = useState<TransactionType[]>(['expense','income'])
   const [allMonths, setAllMonths] = useState(false)
   const [ledgerDate, setLedgerDate] = useState('')
-  const [ledgerCategory, setLedgerCategory] = useState('')
+  const [ledgerCategories, setLedgerCategories] = useState<string[]>([])
   const [ledgerFiltersOpen, setLedgerFiltersOpen] = useState(false)
   const [month, setMonth] = useState(() => monthString(new Date()))
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
@@ -195,9 +195,9 @@ export default function App() {
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
   const dailySummary = useMemo(() => dailySpendingSummary(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
-  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterTypes,month:allMonths?null:month}).filter(e=>(!drilldownIds || drilldownIds.includes(e.categoryId)) && (!ledgerCategory || e.categoryId === ledgerCategory) && (!ledgerDate || e.date === ledgerDate)), [entries,categoryList,searchTerm,filterTypes,allMonths,month,drilldownIds,ledgerCategory,ledgerDate])
-  const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterTypes.length !== 2 || allMonths || ledgerDate || ledgerCategory)
-  const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterTypes(['expense','income']); setAllMonths(false); setLedgerDate(''); setLedgerCategory(''); setCalendarDate(null) }
+  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterTypes,month:allMonths?null:month}).filter(e=>(!drilldownIds || drilldownIds.includes(e.categoryId)) && (ledgerCategories.length===0 || ledgerCategories.includes(e.categoryId)) && (!ledgerDate || e.date === ledgerDate)), [entries,categoryList,searchTerm,filterTypes,allMonths,month,drilldownIds,ledgerCategories,ledgerDate])
+  const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterTypes.length !== 2 || allMonths || ledgerDate || ledgerCategories.length>0)
+  const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterTypes(['expense','income']); setAllMonths(false); setLedgerDate(''); setLedgerCategories([]); setCalendarDate(null) }
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new', date?: string) => { setCopyTemplate(null); setNewEntryDate(date); setEditing(entry) }
   const duplicateEntry = (entry: Entry) => { setCopyTemplate(entry); setNewEntryDate(undefined); setEditing('new') }
@@ -397,11 +397,21 @@ export default function App() {
             {(['expense','income'] as const).map(type => <button key={type} type="button" aria-pressed={filterTypes.includes(type)} className={filterTypes.includes(type)?'active':''} onClick={()=>{
               const next=filterTypes.includes(type) ? filterTypes.filter(v=>v!==type) : [...filterTypes,type]
               setFilterTypes(next)
-              if(ledgerCategory && !next.includes(categoryList.find(c=>c.id===ledgerCategory)?.type ?? 'expense'))setLedgerCategory('')
+              setLedgerCategories(selected=>selected.filter(id=>next.includes(categoryList.find(c=>c.id===id)?.type ?? 'expense')))
             }}>{filterTypes.includes(type)?'✓ ':''}{type==='expense'?'支出':'收入'}</button>)}
           </div>
           <div className="ledger-advanced-filters">
-            <label><span>按分类筛选</span><select aria-label="筛选账单分类" value={ledgerCategory} onChange={e=>setLedgerCategory(e.target.value)}><option value="">全部分类</option>{categoryList.filter(c=>filterTypes.includes(c.type)).map(c=><option key={c.id} value={c.id}>{c.type==='income'?'收入 · ':'支出 · '}{c.name}</option>)}</select></label>
+            <div className="ledger-category-multi" role="group" aria-label="按分类多选筛选">
+              <div className="ledger-category-multi-heading"><span>按分类筛选（可多选）</span><button type="button" onClick={()=>setLedgerCategories([])} disabled={ledgerCategories.length===0}>全部分类</button></div>
+              <div className="ledger-category-options">
+                {categoryList.filter(c=>filterTypes.includes(c.type)).map(category=><label key={category.id} className={ledgerCategories.includes(category.id)?'selected':''}>
+                  <input type="checkbox" checked={ledgerCategories.includes(category.id)} onChange={event=>setLedgerCategories(selected=>event.target.checked?[...selected,category.id]:selected.filter(id=>id!==category.id))}/>
+                  <span>{category.type==='income'?'收入 · ':'支出 · '}{category.name}</span>
+                </label>)}
+              </div>
+              {filterTypes.length===0 && <small>请先选择收入或支出类型</small>}
+              {ledgerCategories.length>0 && <small>已选 {ledgerCategories.length} 个分类，合并显示所选账单</small>}
+            </div>
           </div>
         </div>
 
