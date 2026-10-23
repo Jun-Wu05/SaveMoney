@@ -23,7 +23,7 @@ import { icons } from './categoryIcons'
 import { EntryEditor } from './EntryEditor'
 import { CategoryManager } from './CategoryManager'
 import { LotteryPage } from './LotteryPage'
-import { LOTTERY_EXPENSE_ID, LOTTERY_INCOME_ID, ensureLotteryCategories, lotteryTotals } from './lottery'
+import { LOTTERY_EXPENSE_ID, LOTTERY_INCOME_ID, ensureLotteryCategories, lotteryTotals, effectiveLotteryBudget } from './lottery'
 import { checkPwaUpdate } from './pwaUpdateCheck'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -169,6 +169,7 @@ export default function App() {
   const budgetCount = useLiveQuery(() => db.budgets.count(), [], 0)
   const categoryBudgetCount = useLiveQuery(() => db.categoryBudgets.count(), [], 0)
   const categoryBudgets = useLiveQuery(() => db.categoryBudgets.where('month').equals(month).toArray(), [month], [])
+  const lotteryBudgetHistory = useLiveQuery(() => db.categoryBudgets.where('categoryId').equals(LOTTERY_EXPENSE_ID).toArray(), [], [])
   const [categoryBudgetEditing, setCategoryBudgetEditing] = useState<string | null>(null)
   const [categoryBudgetInput, setCategoryBudgetInput] = useState('')
   const [categoryBudgetBusy, setCategoryBudgetBusy] = useState(false)
@@ -184,7 +185,7 @@ export default function App() {
   const expenses = sumMinor(monthEntries, 'expense')
   const income = sumMinor(monthEntries, 'income')
   const lotterySummary = useMemo(() => lotteryTotals(entries ?? [], month), [entries,month])
-  const lotteryBudget = categoryBudgets.find(b => b.categoryId === LOTTERY_EXPENSE_ID)?.amountMinor ?? null
+  const lotteryBudget = useMemo(() => effectiveLotteryBudget(lotteryBudgetHistory, month), [lotteryBudgetHistory, month])
   const byCategory = useMemo(() => {
     const map = new Map<string, number>()
     for (const e of monthEntries.filter(e => e.type === 'expense')) map.set(e.categoryId, (map.get(e.categoryId) ?? 0) + e.amountMinor)
@@ -358,7 +359,7 @@ export default function App() {
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
       {!lotteryOpen && (budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
-      {lotteryOpen && tab === 'home' && <LotteryPage entries={entries ?? []} categories={categoryList} month={month} onMonthChange={setMonth} budgetMinor={lotteryBudget} onBack={() => {setLotteryOpen(false);window.scrollTo(0,0)}} onQuickRecord={type => void quickLotteryRecord(type)} onEdit={openEditor}/>}
+      {lotteryOpen && tab === 'home' && <LotteryPage entries={entries ?? []} categories={categoryList} month={month} onMonthChange={setMonth} budgetMinor={lotteryBudget?.amountMinor ?? null} inheritedBudgetFrom={lotteryBudget?.inherited ? lotteryBudget.sourceMonth : null} onBack={() => {setLotteryOpen(false);window.scrollTo(0,0)}} onQuickRecord={type => void quickLotteryRecord(type)} onEdit={openEditor}/>}
       {!lotteryOpen && !budgetOpen && tab === 'home' && <div key="motion-home" className="motion-page">
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
         <div className="home-v2-budget-heading"><h2>本月预算</h2><span>${currentBudget ? '掌握可用余额' : '规划本月支出'}</span></div>
