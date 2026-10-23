@@ -184,7 +184,7 @@ export default function App() {
   const monthEntries = useMemo(() => (entries ?? []).filter(entry => entry.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)), [entries, month])
   const expenses = sumMinor(monthEntries, 'expense')
   const income = sumMinor(monthEntries, 'income')
-  const lotterySummary = useMemo(() => lotteryTotals(entries ?? [], month), [entries,month])
+  const lotterySummary = useMemo(() => lotteryTotals(entries ?? [], month, categoryList), [entries,month,categoryList])
   const lotteryBudget = useMemo(() => effectiveLotteryBudget(lotteryBudgetHistory, month), [lotteryBudgetHistory, month])
   const byCategory = useMemo(() => {
     const map = new Map<string, number>()
