@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { type Category, type TransactionType } from './db'
 import { addCategory, updateCategoryDetails, deleteUnusedCategory } from './categories'
 import { IconPicker } from './categoryIcons'
