@@ -836,9 +836,34 @@
 .lottery-empty{font-size:12px;color:#98a198;text-align:center;padding:28px 0}
 @media(max-width:360px){.lottery-home-metrics{gap:8px}.lottery-actions{gap:6px}.lottery-actions button{font-size:12px}}
 
-/* Lightweight calculator actions preserve the existing three-column keypad. */
-.amount-calc-bar{display:flex;align-items:center;gap:7px;margin:-8px 0 12px;min-width:0}
-.amount-calc-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#7d8c7e;font-variant-numeric:tabular-nums}
-.amount-calc-bar button{flex:none;display:grid;place-items:center;width:40px;height:36px;border:1px solid #dde7da;border-radius:10px;background:#e8eee6;color:#446e54;font-size:19px;font-weight:650;touch-action:manipulation}
-.amount-calc-bar button:last-child{background:#527d66;color:white;border-color:#527d66}
-@media(max-width:360px){.amount-calc-bar{gap:5px}.amount-calc-bar button{width:36px}}
+/* Compact four-column money keypad, with operations on the right like standard calculators. */
+.editor .amount-keypad-calc{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+  margin:7px 0 12px;
+}
+.amount-keypad-calc .amount-keypad-digit{min-width:0;min-height:0}
+.amount-keypad-calc .amount-keypad-digit button{width:100%;height:100%;min-height:44px}
+.editor .amount-keypad-calc button.amount-keypad-op{
+  min-width:0;
+  min-height:44px;
+  padding:0;
+  background:#e7eee6;
+  border-color:#dbe5db;
+  color:#456d53;
+}
+.editor .amount-keypad-calc button.amount-keypad-equals{
+  color:#fff;background:#527d66;border-color:#527d66;
+}
+.amount-calc-expression{
+  min-height:17px;
+  margin:-9px 0 8px;
+  font-size:12px;
+  line-height:1.4;
+  color:#66816c;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+  text-align:center;
+}
+@media(max-width:360px){.editor .amount-keypad-calc{gap:5px}}
