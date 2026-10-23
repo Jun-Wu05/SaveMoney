@@ -16,6 +16,7 @@ import { filterEntries } from './ledgerFilters'
 import { downloadBackup, downloadCsv, restoreBackup, validateBackupText, type BackupData } from './backup'
 import { downloadExcel } from './excelExport'
 import { parseSaveMoneyCsv, type CsvImportPreview } from './csvImport'
+import { parseSaveMoneyExcel } from './excelImport'
 import { importCsvBills, previewImport } from './importBills'
 import { ExpenseCalendar } from './ExpenseCalendar'
 import { icons } from './categoryIcons'
@@ -273,9 +274,11 @@ export default function App() {
   async function chooseCsv(file?: File) {
     setPendingCsv(null); setCsvStatus('')
     if (!file) return
-    if (file.size > 20_000_000) { setCsvStatus('CSV 文件过大'); return }
-    try { setPendingCsv(parseSaveMoneyCsv(await file.text())) }
-    catch (error) { setCsvStatus(error instanceof Error ? error.message : 'CSV 解析失败') }
+    if (file.size > 20_000_000) { setCsvStatus('文件过大，请选择不超过 20 MB 的账单'); return }
+    try {
+      if (!/\.(csv|xlsx)$/i.test(file.name)) throw new Error('请选择 CSV 或 XLSX 文件')
+      setPendingCsv(/\.xlsx$/i.test(file.name) ? await parseSaveMoneyExcel(file) : parseSaveMoneyCsv(await file.text()))
+    } catch (error) { setCsvStatus(error instanceof Error ? error.message : '账单解析失败') }
   }
 
   async function confirmCsvImport() {
@@ -416,8 +419,8 @@ export default function App() {
           <button disabled={backupBusy} onClick={() => exportData('csv')}>导出 CSV 账单</button>
         </div>
       </div>
-      <div className="setting-card"><h3>导入 CSV 账单</h3><p>支持 SaveMoney 导出的 CSV 文件。只追加新账单，不覆盖现有账本；相同日期、类型、金额、分类和备注的记录视为重复。</p>
-        <label className="file-label">选择 CSV 账单<input type="file" accept=".csv,text/csv" disabled={backupBusy} onChange={e=>{void chooseCsv(e.target.files?.[0]);e.target.value=''}} /></label>
+      <div className="setting-card"><h3>导入 CSV / Excel 账单</h3><p>支持 SaveMoney 导出的 CSV 或 Excel 月度账单。只追加新账单，不覆盖现有账本；相同日期、类型、金额、分类和备注的记录视为重复。</p>
+        <label className="file-label">选择 CSV / Excel 文件<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={backupBusy} onChange={e=>{void chooseCsv(e.target.files?.[0]);e.target.value=''}} /></label>
         {pendingCsv && <div className="restore-preview">
           <strong>导入预览</strong>
           <p>有效 {pendingCsv.rows.length} 笔 · 异常 {pendingCsv.errors.length} 行</p>
