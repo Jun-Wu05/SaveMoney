@@ -14,3 +14,17 @@ describe('multi-select transaction types',()=>{
  it('filters only income',()=>expect(filterEntries(rows,cats,{keyword:'',type:['income'],month:null}).map(x=>x.id)).toEqual(['b']))
  it('shows none when both unchecked',()=>expect(filterEntries(rows,cats,{keyword:'',type:[],month:null})).toHaveLength(0))
 })
+
+describe('combined types and category multiselection',()=>{
+ it('combines expense and income lottery categories in one query',()=>{
+  const entries=[
+   {id:'e',date:'2026-10-23',type:'expense',categoryId:'lottery-expense',note:''},
+   {id:'i',date:'2026-10-23',type:'income',categoryId:'lottery-income',note:''},
+   {id:'other',date:'2026-10-23',type:'expense',categoryId:'food',note:''},
+  ] as Entry[]
+  const selected=['lottery-expense','lottery-income']
+  expect(filterEntries(entries,[],{keyword:'',month:'2026-10',type:['expense','income'],categoryIds:selected}).map(x=>x.id)).toEqual(['e','i'])
+  expect(filterEntries(entries,[],{keyword:'',month:'2026-10',type:['income'],categoryIds:['lottery-income']}).map(x=>x.id)).toEqual(['i'])
+  expect(filterEntries(entries,[],{keyword:'',month:'2026-10',type:['expense','income'],categoryIds:[]}).map(x=>x.id)).toEqual(['e','i','other'])
+ })
+})
