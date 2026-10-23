@@ -6,6 +6,7 @@ import { saveEntry, removeEntry, type Category, type Entry, type TransactionType
 import { localDay, money, parseAmountMinor } from './money'
 import { addCategory } from './categories'
 import { pressAmountKey, type AmountKey } from './amountKeypad'
+import { calculateAmount, type CalcOperator, type CalcPending } from './amountCalculator'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { icons, IconPicker } from './categoryIcons'
 import { CategoryManager } from './CategoryManager'
@@ -22,6 +23,7 @@ const isValidLocalDate = (value: string) => {
 export function EntryEditor({ categories, entries, entry, template, initialDate, preset, onClose, onSaved, onQuickSaved, onDeleted, onDuplicate }: { categories: Category[]; entries: Entry[]; entry: Entry | null; template?: Entry | null; initialDate?: string; preset?: {type: TransactionType; categoryId: string} | null; onClose: () => void; onSaved: (message: string) => void; onQuickSaved: (message: string) => void; onDeleted: () => void; onDuplicate: (entry: Entry) => void }) {
   const [type, setType] = useState<TransactionType>(entry?.type ?? template?.type ?? preset?.type ?? 'expense')
   const [amount, setAmount] = useState(entry || template ? ((entry ?? template)!.amountMinor / 100).toFixed(2) : '')
+  const [pendingCalc, setPendingCalc] = useState<CalcPending>(null)
   const [categoryId, setCategoryId] = useState(entry?.categoryId ?? template?.categoryId ?? preset?.categoryId ?? '')
   const [date, setDate] = useState(entry?.date ?? initialDate ?? localDay(new Date()))
   const [note, setNote] = useState(entry?.note ?? template?.note ?? '')
@@ -44,6 +46,21 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
   const [customKeypad, setCustomKeypad] = useState(true)
   const keypadKeys: AmountKey[] = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
   const applyAmountKey = (key: AmountKey) => { setAmount(current => pressAmountKey(current,key)); setError('') }
+  const startCalc = (operator: CalcOperator) => {
+    if (pendingCalc && amount.trim() === '') { setPendingCalc({ ...pendingCalc, operator }); return }
+    const result = calculateAmount(pendingCalc, amount)
+    if ('error' in result) { setError(result.error); return }
+    setPendingCalc({ baseMinor: result.amountMinor, operator })
+    setAmount('')
+    setError('')
+  }
+  const finishCalc = () => {
+    const result = calculateAmount(pendingCalc, amount)
+    if ('error' in result) { setError(result.error); return }
+    setAmount(result.display)
+    setPendingCalc(null)
+    setError('')
+  }
   const overlayRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const scrollY = window.scrollY
@@ -135,8 +152,11 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
     event.preventDefault()
     if (busy) return
     const saveAndContinue = !entry && ((event.nativeEvent as SubmitEvent).submitter as HTMLElement | null)?.dataset.action === 'again'
-    const amountMinor = parseAmountMinor(amount)
-    if (amountMinor === null) return setError('请输入正确的金额，最多两位小数')
+    const computed = calculateAmount(pendingCalc, amount)
+    if ('error' in computed) return setError(pendingCalc ? computed.error : '请输入正确的金额，最多两位小数')
+    const amountMinor = computed.amountMinor
+    setAmount(computed.display)
+    setPendingCalc(null)
     if (!isValidLocalDate(date)) return setError('请选择有效日期')
     if (!selected) return setError('请先选择分类')
     setBusy(true); setError('')
@@ -148,6 +168,7 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
       })
       if (saveAndContinue) {
         setAmount('')
+        setPendingCalc(null)
         setNote('')
         setCategoryId(selected)
         onQuickSaved('已保存一笔，可以继续记账')
@@ -201,7 +222,13 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
       <form id="entry-editor-form" className="editor-scroller entry-editor-form" hidden={categoryView !== 'list'} onSubmit={submit}>
         <div className="type-toggle"><button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setCategoryId('')}}>支出</button><button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setCategoryId('')}}>收入</button></div>
         <label className="amount-label" htmlFor="amount">金额（人民币）</label>
-        <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} readOnly={customKeypad} onChange={event => setAmount(event.target.value)} aria-label="记账金额" /></div>
+        <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} readOnly={customKeypad} onChange={event => {setAmount(event.target.value);setError('')}} aria-label="记账金额" /></div>
+        <div className="amount-calc-bar" role="group" aria-label="金额加减计算">
+          <span className="amount-calc-preview" aria-live="polite">{pendingCalc ? `¥${money(pendingCalc.baseMinor)} ${pendingCalc.operator}` : '可直接加减金额'}</span>
+          <button type="button" onClick={()=>startCalc('+')} aria-label="加">＋</button>
+          <button type="button" onClick={()=>startCalc('-')} aria-label="减">−</button>
+          <button type="button" onClick={finishCalc} aria-label="等于">＝</button>
+        </div>
         <div className="keypad-mode"><button type="button" onClick={()=>setCustomKeypad(value=>!value)}>{customKeypad?'使用系统键盘':'使用记账数字键盘'}</button></div>
         {customKeypad && <div className="amount-keypad" role="group" aria-label="记账数字键盘">
           {keypadKeys.map(key=><button key={key} type="button" className={key==='backspace'?'key-backspace':''}
@@ -211,6 +238,7 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
         {!entry && lastEntryOfType(entries, type) && <button type="button" className="copy-last" onClick={() => {
           const previous = lastEntryOfType(entries, type)!
           setAmount((previous.amountMinor / 100).toFixed(2))
+          setPendingCalc(null)
           setCategoryId(previous.categoryId)
           setNote(previous.note)
           setError('')
