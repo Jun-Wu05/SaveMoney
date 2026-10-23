@@ -195,7 +195,7 @@ export default function App() {
   const trend = useMemo(() => monthlyExpenseTrend(entries ?? [], month), [entries, month])
   const dailySummary = useMemo(() => dailySpendingSummary(entries ?? [], month), [entries, month])
   const insights = useMemo(() => spendingInsights(entries ?? [], categoryList, month, currentBudget?.amountMinor), [entries, categoryList, month, currentBudget?.amountMinor])
-  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterTypes,month:allMonths?null:month}).filter(e=>(!drilldownIds || drilldownIds.includes(e.categoryId)) && (ledgerCategories.length===0 || ledgerCategories.includes(e.categoryId)) && (!ledgerDate || e.date === ledgerDate)), [entries,categoryList,searchTerm,filterTypes,allMonths,month,drilldownIds,ledgerCategories,ledgerDate])
+  const filteredEntries = useMemo(() => filterEntries(entries ?? [], categoryList, {keyword:searchTerm,type:filterTypes,categoryIds:ledgerCategories,month:allMonths?null:month}).filter(e=>(!drilldownIds || drilldownIds.includes(e.categoryId)) && (!ledgerDate || e.date === ledgerDate)), [entries,categoryList,searchTerm,filterTypes,allMonths,month,drilldownIds,ledgerCategories,ledgerDate])
   const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterTypes.length !== 2 || allMonths || ledgerDate || ledgerCategories.length>0)
   const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterTypes(['expense','income']); setAllMonths(false); setLedgerDate(''); setLedgerCategories([]); setCalendarDate(null) }
   const recent = monthEntries.slice(0, 5)
