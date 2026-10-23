@@ -25,7 +25,7 @@ type Props = {
   onEdit: (entry: Entry) => void
 }
 
-export function LotteryPage({ entries, month, onMonthChange, budgetMinor, inheritedBudgetFrom, onBack, onQuickRecord, onEdit }: Props) {
+export function LotteryPage({ entries, categories, month, onMonthChange, budgetMinor, inheritedBudgetFrom, onBack, onQuickRecord, onEdit }: Props) {
   const [budgetEdit, setBudgetEdit] = useState(false)
   const [budgetInput, setBudgetInput] = useState('')
   const [busy, setBusy] = useState(false)
