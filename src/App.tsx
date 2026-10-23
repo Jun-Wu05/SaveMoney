@@ -121,6 +121,49 @@ function EntryRow({ entry, categories, onEdit, onDeleted }: { entry: Entry; cate
 
 
 
+function SettingsSwipeBack({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
+  const start = useRef<{ x: number; y: number; axis: 'pending' | 'horizontal' | 'vertical' } | null>(null)
+  const [offset, setOffset] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const [returning, setReturning] = useState(false)
+  const offsetRef = useRef(0)
+  const reset = () => { start.current = null; setDragging(false); setReturning(true); offsetRef.current = 0; setOffset(0) }
+  return <div className="settings-swipe-viewport">
+    <div className={dragging ? 'settings-swipe-page is-dragging' : 'settings-swipe-page'}
+      style={{ transform: `translate3d(${offset}px,0,0)` }}
+      onTransitionEnd={() => { if (returning) setReturning(false) }}
+      onTouchStart={event => {
+        if (event.touches.length !== 1 || event.touches[0].clientX > 24 || returning) return
+        const touch = event.touches[0]
+        start.current = { x: touch.clientX, y: touch.clientY, axis: 'pending' }
+      }}
+      onTouchMove={event => {
+        if (!start.current || event.touches.length !== 1) return
+        const touch = event.touches[0]
+        const dx = touch.clientX - start.current.x
+        const dy = touch.clientY - start.current.y
+        if (start.current.axis === 'pending') {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return
+          start.current.axis = dx > 0 && dx > Math.abs(dy) * 1.6 ? 'horizontal' : 'vertical'
+        }
+        if (start.current.axis !== 'horizontal') return
+        const next = Math.min(window.innerWidth, Math.max(0, dx))
+        offsetRef.current = next
+        setDragging(true)
+        setOffset(next)
+      }}
+      onTouchEnd={() => {
+        if (!start.current) return
+        const completed = start.current.axis === 'horizontal' && offsetRef.current >= 80
+        reset()
+        if (completed) onBack()
+      }}
+      onTouchCancel={reset}>
+      {children}
+    </div>
+  </div>
+}
+
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [settingsPage, setSettingsPage] = useState<'root'|'data'|'categories'|'preferences'|'help'|'privacy'|'about'>('root')
@@ -399,7 +442,7 @@ export default function App() {
             <button onClick={() => openSettingsPage('privacy')}><ShieldCheck size={19}/><span><strong>隐私与数据安全</strong></span><ChevronRight size={17}/></button>
             <button onClick={() => openSettingsPage('about')}><Info size={19}/><span><strong>关于 SaveMoney</strong></span><ChevronRight size={17}/></button>
           </section><p className="settings-v2-footer">SaveMoney · 免费 · 本地优先</p>
-        </> : <>
+        </> : <SettingsSwipeBack onBack={() => openSettingsPage('root')}>
           <button className="settings-v2-back" type="button" onClick={() => openSettingsPage('root')}><ChevronLeft size={19}/> 返回设置</button>
           <h2 className="settings-v2-page-title">{{data:'数据管理',categories:'分类管理',preferences:'记账偏好',help:'帮助中心',privacy:'隐私与数据安全',about:'关于 SaveMoney'}[settingsPage]}</h2>
           {settingsPage === 'data' && <>
@@ -457,7 +500,7 @@ export default function App() {
           </div>}
           {settingsPage === 'privacy' && <div className="setting-card"><h3>本地优先</h3><p>账单仅保存在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器。</p><h3 className="settings-v2-subheading">请定期备份</h3><p>清除网站数据、卸载应用或更换手机可能导致账本丢失。请在数据管理中导出 JSON 并保存到安全位置。</p><button className="settings-v2-inline-link" onClick={() => openSettingsPage('data')}>前往数据管理 <ChevronRight size={15}/></button></div>}
           {settingsPage === 'about' && <div className="setting-card"><h3>SaveMoney 1.0</h3><p>免费、简洁、本地优先的个人记账工具。</p><p>支持日常记账、分类预算、消费统计及本地备份。</p></div>}
-        </>}
+        </SettingsSwipeBack>}
       </div>}
       {budgetOpen && <section className="budget-detail">
         <button type="button" className="back-link" onClick={() => setBudgetOpen(false)}><ChevronLeft size={18}/> 返回首页</button>
