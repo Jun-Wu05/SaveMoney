@@ -1,4 +1,4 @@
-import { BookOpen, Bus, Ellipsis, Film, Gift, Heart, House, ShoppingBag, Utensils, Wallet, Briefcase, Coffee, CarFront, Plane, Gamepad2, HeartPulse, PawPrint, Shirt, Smartphone, Music, Dumbbell, PiggyBank, Plus, Home } from 'lucide-react'
+import { BookOpen, Bus, Ellipsis, Film, Gift, Heart, House, ShoppingBag, Utensils, Wallet, Briefcase, Coffee, CarFront, Plane, Gamepad2, HeartPulse, PawPrint, Shirt, Smartphone, Music, Dumbbell, PiggyBank, Home } from 'lucide-react'
 
 export const icons: Record<string, typeof Home> = {
   utensils: Utensils, 'shopping-bag': ShoppingBag, bus: Bus, house: House, film: Film,
