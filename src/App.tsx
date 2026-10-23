@@ -22,6 +22,7 @@ import { ExpenseCalendar } from './ExpenseCalendar'
 import { icons } from './categoryIcons'
 import { EntryEditor } from './EntryEditor'
 import { CategoryManager } from './CategoryManager'
+import { checkPwaUpdate } from './pwaUpdateCheck'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
 const nav = [
@@ -147,12 +148,13 @@ export default function App() {
   const [csvStatus, setCsvStatus] = useState('')
   const [backupBusy, setBackupBusy] = useState(false)
   const [updateReady, setUpdateReady] = useState(false)
+  const [manualUpdateStatus, setManualUpdateStatus] = useState<'idle'|'checking'|'current'|'available'|'error'|'unsupported'|'inconclusive'>('idle')
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
   const [confirmedBackup, setConfirmedBackup] = useState(() => localStorage.getItem('savemoney-last-backup-confirmed'))
   const [verificationStatus, setVerificationStatus] = useState('')
   const confirmedAgeDays = confirmedBackup && Number.isFinite(Date.parse(confirmedBackup)) ? Math.max(0, Math.floor((Date.now() - Date.parse(confirmedBackup)) / 86_400_000)) : null
   const backupReminder = confirmedAgeDays === null || confirmedAgeDays >= 7
-  useEffect(() => { const callback = () => setUpdateReady(true); window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
+  useEffect(() => { const callback = () => { setUpdateReady(true); setManualUpdateStatus('available') }; window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
   useEffect(() => { setCalendarDate(null) }, [month])
   useEffect(() => { if (!toast) return; const timeout = window.setTimeout(() => setToast(''), 2500); return () => window.clearTimeout(timeout) }, [toast])
@@ -194,6 +196,23 @@ export default function App() {
   const notifyChange = (message: string) => { closeEditor(); setToast(message) }
   const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(ledgerDate || null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
+  async function checkUpdates() {
+    if (manualUpdateStatus === 'checking') return
+    setManualUpdateStatus('checking')
+    if (!('serviceWorker' in navigator)) { setManualUpdateStatus('unsupported'); return }
+    if (!navigator.onLine) { setManualUpdateStatus('error'); return }
+    try {
+      const registration = await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL)
+      if (!registration) { setManualUpdateStatus('error'); return }
+      const result = await checkPwaUpdate(registration)
+      if (result === 'available' || registration.waiting || updateReady) {
+        setUpdateReady(true)
+        setManualUpdateStatus('available')
+      } else setManualUpdateStatus(result)
+    } catch {
+      setManualUpdateStatus('error')
+    }
+  }
   const goToTab = (next: Tab) => {
     setBudgetOpen(false)
     setTab(next)
@@ -462,7 +481,29 @@ export default function App() {
             <div><h3>如何添加到 iPhone 桌面？</h3><p>使用 Safari 打开 SaveMoney，点击分享按钮，选择「添加到主屏幕」。</p></div>
           </div>}
           {settingsPage === 'privacy' && <div className="setting-card"><h3>本地优先</h3><p>账单仅保存在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器。</p><h3 className="settings-v2-subheading">请定期备份</h3><p>清除网站数据、卸载应用或更换手机可能导致账本丢失。请在数据管理中导出 JSON 并保存到安全位置。</p><button className="settings-v2-inline-link" onClick={() => openSettingsPage('data')}>前往数据管理 <ChevronRight size={15}/></button></div>}
-          {settingsPage === 'about' && <div className="setting-card"><h3>SaveMoney 1.0</h3><p>免费、简洁、本地优先的个人记账工具。</p><p>支持日常记账、分类预算、消费统计及本地备份。</p></div>}
+          {settingsPage === 'about' && <>
+            <div className="setting-card"><h3>关于 SaveMoney</h3><p>免费、简洁、本地优先的个人记账工具。</p><p>支持日常记账、分类预算、消费统计及本地备份。</p></div>
+            <section className="setting-card app-version-card" aria-label="应用更新">
+              <h3>版本与更新</h3>
+              <p>随时检查是否有可用的新版本。更新只替换应用资源，不会主动清除本地账单。</p>
+              <div className="app-version-action">
+                <span className="app-version-status" role="status" aria-live="polite">{{
+                  idle: '尚未手动检查',
+                  checking: '正在检查更新…',
+                  current: '检查完成，暂未发现新版本',
+                  available: '发现新版本，可以更新',
+                  error: '检查失败，请确认网络后重试',
+                  unsupported: '当前浏览器不支持应用内更新',
+                  inconclusive: '检查超时，请稍后重试',
+                }[updateReady ? 'available' : manualUpdateStatus]}</span>
+                <button type="button" disabled={manualUpdateStatus === 'checking'} onClick={() => void checkUpdates()}>
+                  {manualUpdateStatus === 'checking' ? '检查中…' : '检查更新'}
+                </button>
+              </div>
+              {updateReady && <button type="button" className="app-version-install" onClick={() => window.dispatchEvent(new Event('savemoney-approve-update'))}>立即更新</button>}
+              <p className="app-version-footnote">更新完成后页面可能重新加载。检查更新不会删除账单；建议定期另存完整 JSON 备份。</p>
+            </section>
+          </>}
         </div>}
       </div>}
       {budgetOpen && <section className="budget-detail">
