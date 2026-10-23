@@ -723,3 +723,75 @@
 .settings-swipe-viewport{overflow-x:clip;min-width:0}
 .settings-swipe-page{min-width:0;touch-action:pan-y;will-change:transform;transition:transform 220ms cubic-bezier(.2,.8,.2,1)}
 .settings-swipe-page.is-dragging{transition:none}
+
+/* Main tabs: stable horizontal hit areas and no displaced selected shadow. */
+.bottom-nav{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 54px minmax(0,1fr) minmax(0,1fr);
+  align-items:center;
+  justify-items:stretch;
+  justify-content:initial;
+  column-gap:0;
+}
+.bottom-nav .nav-item{
+  position:relative;
+  width:100%;
+  min-width:0;
+  min-height:52px;
+  padding:6px 0 3px;
+  justify-content:center;
+  overflow:visible;
+  isolation:isolate;
+  -webkit-tap-highlight-color:transparent;
+}
+.bottom-nav .nav-item::before{
+  content:"";
+  position:absolute;
+  top:2px;
+  left:50%;
+  transform:translateX(-50%);
+  width:40px;
+  height:32px;
+  border-radius:11px;
+  background:transparent;
+  pointer-events:none;
+  z-index:-1;
+}
+.bottom-nav .nav-item.selected::before{background:#e7eee7}
+.bottom-nav .nav-item:active::before{background:#dce8dd}
+.bottom-nav .nav-item svg{flex:none;transform-origin:center center}
+.bottom-nav .add-button{justify-self:center}
+.tab-swipe-surface{
+  min-width:0;
+  overflow-x:clip;
+  touch-action:pan-y;
+  overscroll-behavior-x:none;
+}
+@media(prefers-reduced-motion:no-preference){
+  /* The old opacity fade exposed the previous page/shadow beneath Settings. */
+  .motion-page{animation:none}
+  .motion-page.tab-arrive-left{animation:sm-tab-enter-right 220ms cubic-bezier(.22,.8,.26,1) both}
+  .motion-page.tab-arrive-right{animation:sm-tab-enter-left 220ms cubic-bezier(.22,.8,.26,1) both}
+  @keyframes sm-tab-enter-right{from{transform:translate3d(22px,0,0)}to{transform:translate3d(0,0,0)}}
+  @keyframes sm-tab-enter-left{from{transform:translate3d(-22px,0,0)}to{transform:translate3d(0,0,0)}}
+}
+@media(prefers-reduced-motion:reduce){
+  .motion-page.tab-arrive-left,.motion-page.tab-arrive-right{animation:none!important}
+}
+.settings-swipe-viewport{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  background:#f7f7f2;
+  isolation:isolate;
+}
+.settings-swipe-page{
+  box-sizing:border-box;
+  width:100%;
+  max-width:100%;
+  box-shadow:none;
+  backface-visibility:hidden;
+  will-change:auto;
+}
+.settings-swipe-page.is-dragging{will-change:transform}
