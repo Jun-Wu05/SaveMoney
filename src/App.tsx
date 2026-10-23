@@ -401,17 +401,21 @@ export default function App() {
             }}>{filterTypes.includes(type)?'✓ ':''}{type==='expense'?'支出':'收入'}</button>)}
           </div>
           <div className="ledger-advanced-filters">
-            <div className="ledger-category-multi" role="group" aria-label="按分类多选筛选">
-              <div className="ledger-category-multi-heading"><span>按分类筛选（可多选）</span><button type="button" onClick={()=>setLedgerCategories([])} disabled={ledgerCategories.length===0}>全部分类</button></div>
-              <div className="ledger-category-options">
-                {categoryList.filter(c=>filterTypes.includes(c.type)).map(category=><label key={category.id} className={ledgerCategories.includes(category.id)?'selected':''}>
-                  <input type="checkbox" checked={ledgerCategories.includes(category.id)} onChange={event=>setLedgerCategories(selected=>event.target.checked?[...selected,category.id]:selected.filter(id=>id!==category.id))}/>
-                  <span>{category.type==='income'?'收入 · ':'支出 · '}{category.name}</span>
-                </label>)}
+            <details className="ledger-category-dropdown">
+              <summary aria-label={ledgerCategories.length ? `分类筛选，已选${ledgerCategories.length}项，点击展开` : '分类筛选，全部分类，点击展开'}>
+                <span>分类筛选</span><strong>{ledgerCategories.length ? `已选 ${ledgerCategories.length} 项` : '全部分类'}</strong><ChevronRight size={16}/>
+              </summary>
+              <div className="ledger-category-dropdown-panel">
+                <div className="ledger-category-dropdown-top"><span>选择分类 · 可多选</span><button type="button" onClick={()=>setLedgerCategories([])} disabled={!ledgerCategories.length}>清空</button></div>
+                <div className="ledger-category-dropdown-list">
+                  {categoryList.filter(c=>filterTypes.includes(c.type)).map(category=><label key={category.id} className={ledgerCategories.includes(category.id)?'selected':''}>
+                    <input type="checkbox" checked={ledgerCategories.includes(category.id)} onChange={event=>setLedgerCategories(selected=>event.target.checked?[...selected,category.id]:selected.filter(id=>id!==category.id))}/>
+                    <span>{category.type==='income'?'收入 · ':'支出 · '}{category.name}</span>
+                  </label>)}
+                  {!filterTypes.length && <p>请先选择支出或收入</p>}
+                </div>
               </div>
-              {filterTypes.length===0 && <small>请先选择收入或支出类型</small>}
-              {ledgerCategories.length>0 && <small>已选 {ledgerCategories.length} 个分类，合并显示所选账单</small>}
-            </div>
+            </details>
           </div>
         </div>
 
