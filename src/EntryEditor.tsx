@@ -19,10 +19,10 @@ const isValidLocalDate = (value: string) => {
   return actual.getFullYear() === year && actual.getMonth() === month - 1 && actual.getDate() === day
 }
 
-export function EntryEditor({ categories, entries, entry, template, initialDate, onClose, onSaved, onQuickSaved, onDeleted, onDuplicate }: { categories: Category[]; entries: Entry[]; entry: Entry | null; template?: Entry | null; initialDate?: string; onClose: () => void; onSaved: (message: string) => void; onQuickSaved: (message: string) => void; onDeleted: () => void; onDuplicate: (entry: Entry) => void }) {
-  const [type, setType] = useState<TransactionType>(entry?.type ?? template?.type ?? 'expense')
+export function EntryEditor({ categories, entries, entry, template, initialDate, preset, onClose, onSaved, onQuickSaved, onDeleted, onDuplicate }: { categories: Category[]; entries: Entry[]; entry: Entry | null; template?: Entry | null; initialDate?: string; preset?: {type: TransactionType; categoryId: string} | null; onClose: () => void; onSaved: (message: string) => void; onQuickSaved: (message: string) => void; onDeleted: () => void; onDuplicate: (entry: Entry) => void }) {
+  const [type, setType] = useState<TransactionType>(entry?.type ?? template?.type ?? preset?.type ?? 'expense')
   const [amount, setAmount] = useState(entry || template ? ((entry ?? template)!.amountMinor / 100).toFixed(2) : '')
-  const [categoryId, setCategoryId] = useState(entry?.categoryId ?? template?.categoryId ?? '')
+  const [categoryId, setCategoryId] = useState(entry?.categoryId ?? template?.categoryId ?? preset?.categoryId ?? '')
   const [date, setDate] = useState(entry?.date ?? initialDate ?? localDay(new Date()))
   const [note, setNote] = useState(entry?.note ?? template?.note ?? '')
   const [error, setError] = useState('')

@@ -22,6 +22,8 @@ import { ExpenseCalendar } from './ExpenseCalendar'
 import { icons } from './categoryIcons'
 import { EntryEditor } from './EntryEditor'
 import { CategoryManager } from './CategoryManager'
+import { LotteryPage } from './LotteryPage'
+import { LOTTERY_EXPENSE_ID, LOTTERY_INCOME_ID, ensureLotteryCategories, lotteryTotals } from './lottery'
 import { checkPwaUpdate } from './pwaUpdateCheck'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -127,6 +129,10 @@ export default function App() {
   const [settingsPage, setSettingsPage] = useState<'root'|'data'|'categories'|'preferences'|'help'|'privacy'|'about'>('root')
   const [defaultLedgerView, setDefaultLedgerView] = useState<'list'|'calendar'>(() => localStorage.getItem('savemoney-default-ledger-view') === 'list' ? 'list' : 'calendar')
   const [budgetOpen, setBudgetOpen] = useState(false)
+  const [lotteryOpen, setLotteryOpen] = useState(false)
+  const [lotteryBusy, setLotteryBusy] = useState(false)
+  const [lotteryError, setLotteryError] = useState('')
+  const [lotteryPreset, setLotteryPreset] = useState<{type: TransactionType; categoryId: string} | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [drilldownIds, setDrilldownIds] = useState<string[] | null>(null)
   const [filterType, setFilterType] = useState<TransactionType | 'all'>('all')
@@ -177,6 +183,8 @@ export default function App() {
   const monthEntries = useMemo(() => (entries ?? []).filter(entry => entry.date.startsWith(month)).sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)), [entries, month])
   const expenses = sumMinor(monthEntries, 'expense')
   const income = sumMinor(monthEntries, 'income')
+  const lotterySummary = useMemo(() => lotteryTotals(entries ?? [], month), [entries,month])
+  const lotteryBudget = categoryBudgets.find(b => b.categoryId === LOTTERY_EXPENSE_ID)?.amountMinor ?? null
   const byCategory = useMemo(() => {
     const map = new Map<string, number>()
     for (const e of monthEntries.filter(e => e.type === 'expense')) map.set(e.categoryId, (map.get(e.categoryId) ?? 0) + e.amountMinor)
@@ -192,7 +200,7 @@ export default function App() {
   const recent = monthEntries.slice(0, 5)
   const openEditor = (entry: Entry | 'new', date?: string) => { setCopyTemplate(null); setNewEntryDate(date); setEditing(entry) }
   const duplicateEntry = (entry: Entry) => { setCopyTemplate(entry); setNewEntryDate(undefined); setEditing('new') }
-  const closeEditor = () => { setEditing(null); setNewEntryDate(undefined); setCopyTemplate(null) }
+  const closeEditor = () => { setEditing(null); setNewEntryDate(undefined); setCopyTemplate(null); setLotteryPreset(null) }
   const notifyChange = (message: string) => { closeEditor(); setToast(message) }
   const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(ledgerDate || null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
@@ -213,7 +221,19 @@ export default function App() {
       setManualUpdateStatus('error')
     }
   }
+  async function openLottery() {
+    if (lotteryBusy) return
+    setLotteryBusy(true); setLotteryError('')
+    try { await ensureLotteryCategories(); setLotteryOpen(true); window.scrollTo(0,0) }
+    catch { setLotteryError('彩票账本初始化失败，请重试。现有账单未被修改。') }
+    finally { setLotteryBusy(false) }
+  }
+  async function quickLotteryRecord(type: TransactionType) {
+    setLotteryPreset({type,categoryId:type === 'expense' ? LOTTERY_EXPENSE_ID : LOTTERY_INCOME_ID})
+    openEditor('new')
+  }
   const goToTab = (next: Tab) => {
+    setLotteryOpen(false)
     setBudgetOpen(false)
     setTab(next)
     if (next === 'settings') setSettingsPage('root')
@@ -337,8 +357,9 @@ export default function App() {
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
-      {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
-      {!budgetOpen && tab === 'home' && <div key="motion-home" className="motion-page">
+      {!lotteryOpen && (budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
+      {lotteryOpen && tab === 'home' && <LotteryPage entries={entries ?? []} categories={categoryList} month={month} onMonthChange={setMonth} budgetMinor={lotteryBudget} onBack={() => {setLotteryOpen(false);window.scrollTo(0,0)}} onQuickRecord={type => void quickLotteryRecord(type)} onEdit={openEditor}/>}
+      {!lotteryOpen && !budgetOpen && tab === 'home' && <div key="motion-home" className="motion-page">
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
         <div className="home-v2-budget-heading"><h2>本月预算</h2><span>${currentBudget ? '掌握可用余额' : '规划本月支出'}</span></div>
         <button type="button" className="budget-card budget-action" aria-label={currentBudget ? '查看和管理月度预算' : '设置月度预算'} onClick={() => { setBudgetOpen(true); window.scrollTo(0, 0) }}>
@@ -350,6 +371,12 @@ export default function App() {
           </> : <div className="budget-heading"><span>还没有设置本月预算</span><strong>设置预算 <ChevronRight size={15}/></strong></div>}
         </button>
 
+        <button type="button" className="lottery-home-link" onClick={() => void openLottery()} disabled={lotteryBusy}>
+          <span className="lottery-home-heading"><span className="lottery-home-icon">◈</span><strong>彩票账本</strong><ChevronRight size={19}/></span>
+          <span className="lottery-home-description">单独管理购彩预算和中奖收支</span>
+          <span className="lottery-home-metrics"><span>本月投入 <b>¥${money(lotterySummary.expenseMinor)}</b></span><span>净盈亏 <b>{lotterySummary.netMinor < 0 ? '−' : lotterySummary.netMinor > 0 ? '+' : ''}¥${money(Math.abs(lotterySummary.netMinor))}</b></span></span>
+        </button>
+        {lotteryError && <p className="error" role="alert">{lotteryError}</p>}
         <div className="section-heading home-section-heading"><h2>消费结构</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
         {byCategory.length ? <>
           <div className="home-v2-top3" aria-label="消费最多的三个分类">{byCategory.slice(0,3).map((item,index)=><button key={item.id} type="button" onClick={()=>openCategoryBills([item.id])}><span className="home-v2-rank">{index+1}</span><span className="home-v2-category">{categoryName(categoryList,item.id)}</span><strong>¥{money(item.amount)}</strong><small>{expenses>0?Math.round(item.amount/expenses*100):0}%</small></button>)}</div>
@@ -572,6 +599,6 @@ export default function App() {
       <button className="add-button" aria-label="记一笔" onClick={() => openEditor('new')}><Plus size={25}/></button>
       {nav.slice(2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => goToTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
     </nav>
-    {editing && <EntryEditor key={editing === 'new' ? (copyTemplate ? `copy-${copyTemplate.id}` : 'new') : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} template={copyTemplate} initialDate={newEntryDate} onClose={closeEditor} onSaved={notifyChange} onQuickSaved={setToast} onDeleted={()=>notifyChange('账单已删除')} onDuplicate={duplicateEntry}/>}
+    {editing && <EntryEditor key={editing === 'new' ? (copyTemplate ? `copy-${copyTemplate.id}` : 'new') : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} template={copyTemplate} initialDate={newEntryDate} preset={lotteryPreset} onClose={closeEditor} onSaved={notifyChange} onQuickSaved={setToast} onDeleted={()=>notifyChange('账单已删除')} onDuplicate={duplicateEntry}/>}
   </div>
 }
