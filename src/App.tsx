@@ -682,7 +682,7 @@ export default function App() {
             <button onClick={() => openSettingsPage('data')}><DatabaseBackup size={19}/><span><strong>数据管理</strong><small>{backupReminder ? '建议备份 · 点击查看' : '备份、恢复与导入导出'}</small></span><ChevronRight size={17}/></button>
             <button onClick={() => openSettingsPage('preferences')}><SlidersHorizontal size={19}/><span><strong>记账偏好</strong><small>账单默认显示方式</small></span><ChevronRight size={17}/></button>
           </section>
-          {backupReminder && <button type="button" className="backup-v2-reminder" onClick={() => openSettingsPage('data')}><ShieldCheck size={18}/><span><strong>{backupAgeDays === null ? '尚未确认已保存完整备份' : `距离上次确认保存备份已 ${confirmedAgeDays} 天`}</strong><small>建议每周导出 JSON 并保存到文件或 iCloud</small></span><ChevronRight size={16}/></button>}
+          {backupReminder && <button type="button" className="backup-v2-reminder" onClick={() => openSettingsPage('data')}><ShieldCheck size={18}/><span><strong>{confirmedAgeDays === null ? '尚未确认已保存完整备份' : `距离上次确认保存备份已 ${confirmedAgeDays} 天`}</strong><small>建议每周导出 JSON 并保存到文件或 iCloud</small></span><ChevronRight size={16}/></button>}
           <div className="settings-v2-group-title">应用</div>
           <section className="settings-v2-menu">
             <button onClick={() => openSettingsPage('privacy')}><ShieldCheck size={19}/><span><strong>隐私与数据安全</strong></span><ChevronRight size={17}/></button>
