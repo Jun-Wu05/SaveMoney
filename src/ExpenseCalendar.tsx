@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CalendarDays, Plus, Trash2 } from 'lucide-react'
-import { makeCalendar } from './calendarData'
+import { makeCalendar, calendarNetMinor } from './calendarData'
 import { removeEntry, type Entry, type Category } from './db'
 import { localDay, money } from './money'
 
@@ -37,10 +37,10 @@ export function ExpenseCalendar({ month, entries, categories, selectedDate, onSe
     <div className="calendar-grid calendar-days">
       {Array.from({ length:firstWeekday }, (_,i)=><span key={`blank-${i}`} aria-hidden="true"/>)}
       {days.map(day=><button key={day.date} type="button" className={`calendar-day ${selectedDate===day.date?'is-selected':''} ${day.count>0?'has-entries':''} ${day.date===today?'is-today':''}`}
-        aria-pressed={selectedDate===day.date} aria-current={day.date===today ? 'date' : undefined} aria-label={`${day.date}${day.date===today ? '，今天' : ''}，${day.count}笔，支出${money(day.expenseMinor)}元，收入${money(day.incomeMinor)}元`}
+        aria-pressed={selectedDate===day.date} aria-current={day.date===today ? 'date' : undefined} aria-label={`${day.date}${day.date===today ? '，今天' : ''}，${day.count}笔，支出${money(day.expenseMinor)}元，收入${money(day.incomeMinor)}元，净收支${calendarNetMinor(day) < 0 ? '负' : calendarNetMinor(day) > 0 ? '正' : ''}${money(Math.abs(calendarNetMinor(day)))}元`}
         onClick={()=>onSelectDate(day.date)}>
         <strong>{day.day}</strong>
-        <small className={day.expenseMinor===0 && day.incomeMinor>0 ? 'calendar-income' : ''}>{day.expenseMinor>0?`−${money(day.expenseMinor)}`:day.incomeMinor>0?`+${money(day.incomeMinor)}`:''}</small>
+        <small className={calendarNetMinor(day)>0 ? 'calendar-income' : ''}>{day.count>0 ? `${calendarNetMinor(day)>0 ? '+' : calendarNetMinor(day)<0 ? '−' : ''}${money(Math.abs(calendarNetMinor(day)))}` : ''}</small>
         {day.count>0&&<span className="calendar-indicator" style={{opacity:maxExpense>0 && day.expenseMinor>0 ? .3+.7*day.expenseMinor/maxExpense : .4}}/>}
       </button>)}
     </div>
