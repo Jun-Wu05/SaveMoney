@@ -780,3 +780,58 @@
 .app-version-action button:disabled{opacity:.5}
 .app-version-install{background:#527d66;color:#fff;width:100%;margin-top:2px}
 .app-version-card .app-version-footnote{font-size:11px;color:#8e998d;line-height:1.7}
+
+/* Lottery specialty page: accessible through Home; main navigation remains unchanged. */
+.lottery-home-link{display:flex;flex-direction:column;gap:11px;width:100%;padding:18px 20px;margin:22px 0 7px;text-align:left;border:1px solid #dde7da;border-radius:19px;background:#e7eee7;color:#27372d;min-height:124px}
+.lottery-home-heading{display:flex;align-items:center;gap:10px;font-size:15px}
+.lottery-home-heading svg{margin-left:auto;color:#60866d}
+.lottery-home-icon{display:grid;place-items:center;width:29px;height:29px;border-radius:10px;background:#d5e3d3;color:#4a785b;font-size:21px}
+.lottery-home-description{font-size:11px;color:#6e8373}
+.lottery-home-metrics{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:#657a6b}
+.lottery-home-metrics b{font-size:13px;color:#263b2e;font-variant-numeric:tabular-nums}
+.lottery-page{padding-bottom:16px}
+.lottery-back{display:inline-flex;align-items:center;gap:3px;border:0;background:none;color:#527d66;padding:8px 0 14px;font-size:13px;min-height:42px}
+.lottery-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:9px 0 20px}
+.lottery-heading h1{font-size:29px;line-height:1.2;letter-spacing:-1px;margin:6px 0 7px}
+.lottery-heading p{font-size:12px;margin:0;color:#8a968c}
+.lottery-eyebrow{font-size:10px;font-weight:700;letter-spacing:1.8px;color:#77927c}
+.lottery-emblem{width:60px;height:60px;display:grid;place-items:center;border-radius:20px;background:#e5ede3;color:#527d66}
+.lottery-month{display:flex;gap:15px;align-items:center;justify-content:center;margin-bottom:16px;font-size:13px}
+.lottery-month button{border:0;background:transparent;color:#677a69;padding:8px}
+.lottery-net-card,.lottery-budget-card,.lottery-records{border:1px solid #e9eee5;border-radius:21px;background:#fff;padding:22px;margin-bottom:14px}
+.lottery-net-card{background:#e6eee5;border-color:transparent}
+.lottery-card-label{font-size:12px;color:#65806c}
+.lottery-net-number{display:block;margin:14px 0 24px;font-size:clamp(28px,7vw,37px);line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.9px;color:#263a2c;overflow-wrap:anywhere}
+.lottery-totals{display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid #cbdccc;padding-top:15px}
+.lottery-totals>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+.lottery-totals span{display:flex;gap:5px;align-items:center;color:#6d826e;font-size:11px}
+.lottery-totals b{color:#344437;font-size:16px}
+.lottery-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.lottery-card-head strong{font-size:15px}
+.lottery-card-head button{border:0;color:#527d66;background:#f0f5ef;padding:10px 12px;border-radius:10px;font-size:12px}
+.lottery-budget-values{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:23px 0 13px}
+.lottery-budget-values strong{font-size:22px;color:#2e4334}
+.lottery-budget-values small{font-size:12px;color:#9ba79c}
+.lottery-budget-values>span{font-size:12px;color:#527d66}
+.lottery-progress{height:8px;border-radius:6px;background:#e6eae3;overflow:hidden}
+.lottery-progress>div{background:#61896a;height:100%;border-radius:6px}
+.lottery-muted{font-size:11px;line-height:1.7;color:#8c998e;margin:11px 0 0}
+.lottery-budget-form{margin-top:19px}
+.lottery-budget-form label{display:block;font-size:12px;color:#637466;margin-bottom:8px}
+.lottery-budget-form>div{display:flex;gap:8px}
+.lottery-budget-form input{min-width:0;flex:1;border:1px solid #dfe7df;border-radius:10px;padding:11px;font-size:16px}
+.lottery-budget-form button{border:0;border-radius:10px;background:#527d66;color:#fff;padding:10px 17px;white-space:nowrap}
+.lottery-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0 24px}
+.lottery-actions button{border:0;border-radius:13px;min-height:49px;background:#527d66;color:#fff;font-weight:650;font-size:13px}
+.lottery-actions button+button{background:#e9efe7;color:#365e46}
+.lottery-records h2{font-size:16px;margin:0 0 13px}
+.lottery-records h2 small{font-size:11px;color:#9ca69b;font-weight:400;margin-left:6px}
+.lottery-record{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #f0f3ee;padding:15px 0}
+.lottery-record:last-child{border-bottom:0}
+.lottery-record div{min-width:0;display:flex;flex-direction:column;gap:6px}
+.lottery-record strong{font-size:13px;color:#29342c}
+.lottery-record small{font-size:11px;color:#9aa49a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lottery-record b{white-space:nowrap;font-variant-numeric:tabular-nums;font-size:14px}
+.lottery-record .lottery-income{color:#527d66}
+.lottery-empty{font-size:12px;color:#98a198;text-align:center;padding:28px 0}
+@media(max-width:360px){.lottery-home-metrics{gap:8px}.lottery-actions{gap:6px}.lottery-actions button{font-size:12px}}
