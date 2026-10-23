@@ -441,7 +441,6 @@ export default function App() {
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
   const [confirmedBackup, setConfirmedBackup] = useState(() => localStorage.getItem('savemoney-last-backup-confirmed'))
   const [verificationStatus, setVerificationStatus] = useState('')
-  const backupAgeDays = lastBackup && Number.isFinite(Date.parse(lastBackup)) ? Math.max(0,Math.floor((Date.now()-Date.parse(lastBackup))/86_400_000)) : null
   const confirmedAgeDays = confirmedBackup && Number.isFinite(Date.parse(confirmedBackup)) ? Math.max(0, Math.floor((Date.now() - Date.parse(confirmedBackup)) / 86_400_000)) : null
   const backupReminder = confirmedAgeDays === null || confirmedAgeDays >= 7
   useEffect(() => { const callback = () => setUpdateReady(true); window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
