@@ -1,5 +1,5 @@
 import { describe,expect,it } from 'vitest'
-import { calculateAmount } from './amountCalculator'
+import { calculateAmount, finalizeAmount } from './amountCalculator'
 describe('integer-cent entry calculator',()=>{
   it('adds and subtracts decimal amounts',()=>{
     expect(calculateAmount({baseMinor:2500,operator:'+'},'25')).toEqual({amountMinor:5000,display:'50.00'})
@@ -19,5 +19,18 @@ describe('integer-cent entry calculator',()=>{
   })
   it('limits amount to accepted entry precision',()=>{
     expect(calculateAmount({baseMinor:99999999900,operator:'+'},'1')).toHaveProperty('error')
+  })
+})
+
+describe('saving with unfinished operator', () => {
+  it('saves base amount when user taps plus but never enters a second number', () => {
+    expect(finalizeAmount({baseMinor:11000,operator:'+'},'')).toEqual({amountMinor:11000,display:'110.00'})
+    expect(finalizeAmount({baseMinor:11000,operator:'-'},'')).toEqual({amountMinor:11000,display:'110.00'})
+  })
+  it('calculates normally when the second amount is entered', () => {
+    expect(finalizeAmount({baseMinor:11000,operator:'+'},'5')).toEqual({amountMinor:11500,display:'115.00'})
+  })
+  it('rejects truly empty entries', () => {
+    expect(finalizeAmount(null,'')).toHaveProperty('error')
   })
 })
