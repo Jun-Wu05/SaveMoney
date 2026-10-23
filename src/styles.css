@@ -759,3 +759,24 @@
 
 /* No horizontal navigation gestures: settings subpages use their visible back button. */
 .settings-static-page{min-width:0;width:100%;max-width:100%}
+
+/* About screen: persistent, accessible PWA update control. */
+.app-version-card{display:flex;flex-direction:column;gap:10px}
+.app-version-card h3{margin-bottom:0}
+.app-version-action{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:5px}
+.app-version-status{min-width:0;flex:1;color:#657568;font-size:12px;line-height:1.5}
+.app-version-action button,.app-version-install{
+  min-height:42px;
+  border:0;
+  border-radius:11px;
+  background:#e8eee6;
+  color:#426b51;
+  font-size:12px;
+  font-weight:700;
+  padding:10px 14px;
+  flex-shrink:0;
+  touch-action:manipulation;
+}
+.app-version-action button:disabled{opacity:.5}
+.app-version-install{background:#527d66;color:#fff;width:100%;margin-top:2px}
+.app-version-card .app-version-footnote{font-size:11px;color:#8e998d;line-height:1.7}
