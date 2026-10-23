@@ -8,3 +8,9 @@ describe('ledger filters',()=>{
  it('searches note and category',()=>expect(filterEntries(rows,cats,{keyword:'餐饮',type:'all',month:null})).toHaveLength(1))
  it('filters by type',()=>expect(filterEntries(rows,cats,{keyword:'',type:'income',month:null})).toHaveLength(1))
 })
+describe('multi-select transaction types',()=>{
+ it('displays both when selected',()=>expect(filterEntries(rows,cats,{keyword:'',type:['income','expense'],month:null})).toHaveLength(2))
+ it('filters only expense',()=>expect(filterEntries(rows,cats,{keyword:'',type:['expense'],month:null}).map(x=>x.id)).toEqual(['a']))
+ it('filters only income',()=>expect(filterEntries(rows,cats,{keyword:'',type:['income'],month:null}).map(x=>x.id)).toEqual(['b']))
+ it('shows none when both unchecked',()=>expect(filterEntries(rows,cats,{keyword:'',type:[],month:null})).toHaveLength(0))
+})

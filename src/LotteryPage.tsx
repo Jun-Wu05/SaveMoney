@@ -25,13 +25,13 @@ type Props = {
   onEdit: (entry: Entry) => void
 }
 
-export function LotteryPage({ entries, month, onMonthChange, budgetMinor, inheritedBudgetFrom, onBack, onQuickRecord, onEdit }: Props) {
+export function LotteryPage({ entries, categories, month, onMonthChange, budgetMinor, inheritedBudgetFrom, onBack, onQuickRecord, onEdit }: Props) {
   const [budgetEdit, setBudgetEdit] = useState(false)
   const [budgetInput, setBudgetInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [budgetError, setBudgetError] = useState('')
-  const { records, expenseMinor, incomeMinor, netMinor } = lotteryTotals(entries, month)
-  const history = lotteryHistory(entries, month)
+  const { records, expenseMinor, incomeMinor, netMinor } = lotteryTotals(entries, month, categories)
+  const history = lotteryHistory(entries, month, 6, categories)
   const historyNet = history.reduce((sum, item)=>sum+item.netMinor, 0)
   const remaining = budgetMinor === null ? null : budgetMinor - expenseMinor
   const progress = budgetMinor ? Math.min(100, Math.round(expenseMinor / budgetMinor * 100)) : 0
