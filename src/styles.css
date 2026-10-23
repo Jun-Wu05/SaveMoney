@@ -867,3 +867,32 @@
   text-align:center;
 }
 @media(max-width:360px){.editor .amount-keypad-calc{gap:5px}}
+
+/* Keep pending calculator operands in the primary amount field, not below it. */
+.editor .money-input-calculating{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:nowrap;
+  gap:7px;
+  min-width:0;
+}
+.editor .money-input-calculating .amount-inline-base{
+  flex:0 1 auto;
+  min-width:0;
+  max-width:68%;
+  font-size:clamp(19px,5.8vw,26px);
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  color:#28392e;
+  font-variant-numeric:tabular-nums;
+}
+.editor .money-input-calculating input{
+  flex:0 1 94px;
+  width:94px;
+  min-width:34px;
+  max-width:110px;
+  font-size:clamp(23px,7vw,33px);
+}
