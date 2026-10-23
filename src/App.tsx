@@ -21,6 +21,7 @@ import { importCsvBills, previewImport } from './importBills'
 import { ExpenseCalendar } from './ExpenseCalendar'
 import { icons } from './categoryIcons'
 import { EntryEditor } from './EntryEditor'
+import { classifyTabSwipe, tabFromSwipe, type SwipeAxis } from './tabSwipe'
 import { CategoryManager } from './CategoryManager'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -166,6 +167,8 @@ function SettingsSwipeBack({ children, onBack }: { children: React.ReactNode; on
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
+  const tabGesture = useRef<{ x: number; y: number; axis: SwipeAxis; blocked: boolean } | null>(null)
+  const [tabSwipeDirection, setTabSwipeDirection] = useState<'left' | 'right' | null>(null)
   const [settingsPage, setSettingsPage] = useState<'root'|'data'|'categories'|'preferences'|'help'|'privacy'|'about'>('root')
   const [defaultLedgerView, setDefaultLedgerView] = useState<'list'|'calendar'>(() => localStorage.getItem('savemoney-default-ledger-view') === 'list' ? 'list' : 'calendar')
   const [budgetOpen, setBudgetOpen] = useState(false)
@@ -237,7 +240,34 @@ export default function App() {
   const notifyChange = (message: string) => { closeEditor(); setToast(message) }
   const showCalendar = () => { setLedgerView('calendar'); setAllMonths(false); setCalendarDate(ledgerDate || null) }
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
-  const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next);if(next === 'settings')setSettingsPage('root');if(next === 'list'){setLedgerView('calendar');setLedgerFiltersOpen(false)};window.scrollTo(0,0)}
+  const goToTab = (next: Tab, direction: 'left' | 'right' | null = null) => {
+    setBudgetOpen(false); setTabSwipeDirection(direction); setTab(next)
+    if(next === 'settings') setSettingsPage('root')
+    if(next === 'list'){setLedgerView('calendar');setLedgerFiltersOpen(false)}
+    window.scrollTo(0,0)
+  }
+  const beginTabGesture = (event: React.TouchEvent<HTMLElement>) => {
+    if(event.touches.length !== 1){tabGesture.current=null;return}
+    const target=event.target
+    const blocked=budgetOpen || Boolean(editing) || (tab==='settings' && settingsPage!=='root') ||
+      (target instanceof Element && Boolean(target.closest('input,textarea,select,[contenteditable],.swipe-entry,.settings-swipe-viewport,.donut-card,.daily-chart-touch-wrap,.expense-calendar,.calendar-grid')))
+    tabGesture.current={x:event.touches[0].clientX,y:event.touches[0].clientY,axis:'pending',blocked}
+  }
+  const moveTabGesture = (event: React.TouchEvent<HTMLElement>) => {
+    const start=tabGesture.current
+    if(!start || start.blocked || event.touches.length!==1)return
+    const dx=event.touches[0].clientX-start.x
+    const dy=event.touches[0].clientY-start.y
+    start.axis=classifyTabSwipe(dx,dy,start.axis)
+  }
+  const finishTabGesture = (event: React.TouchEvent<HTMLElement>) => {
+    const start=tabGesture.current;tabGesture.current=null
+    if(!start || start.blocked || start.axis!=='horizontal' || event.changedTouches.length!==1)return
+    const dx=event.changedTouches[0].clientX-start.x
+    const dy=event.changedTouches[0].clientY-start.y
+    const next=tabFromSwipe(tab,dx,dy)
+    if(next)goToTab(next,dx<0?'left':'right')
+  }
   const openSettingsPage = (page: typeof settingsPage) => {setSettingsPage(page);window.scrollTo(0,0)}
 
   async function saveCategoryBudgetForm(event: React.FormEvent) {
@@ -354,9 +384,9 @@ export default function App() {
     {updateReady && !editing && !backupBusy && !pendingBackup && <div className="app-update-banner" role="status"><span>发现新版本。请确认当前账单已保存后更新。</span><button onClick={() => window.dispatchEvent(new Event('savemoney-approve-update'))}>立即更新</button></div>}
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
-    <main className="content">
+    <main className="content tab-swipe-surface" onTouchStart={beginTabGesture} onTouchMove={moveTabGesture} onTouchEnd={finishTabGesture} onTouchCancel={() => { tabGesture.current = null }}>
       {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
-      {!budgetOpen && tab === 'home' && <div key="motion-home" className="motion-page">
+      {!budgetOpen && tab === 'home' && <div key="motion-home" className={tabSwipeDirection ? 'motion-page tab-arrive-' + tabSwipeDirection : 'motion-page'}>
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
         <div className="home-v2-budget-heading"><h2>本月预算</h2><span>${currentBudget ? '掌握可用余额' : '规划本月支出'}</span></div>
         <button type="button" className="budget-card budget-action" aria-label={currentBudget ? '查看和管理月度预算' : '设置月度预算'} onClick={() => { setBudgetOpen(true); window.scrollTo(0, 0) }}>
@@ -376,7 +406,7 @@ export default function App() {
         <div className="section-heading"><h2>最近记录</h2><button onClick={() => goToTab('list')}>查看全部 <ChevronRight size={15}/></button></div>
         {recent.length ? recent.map(e => <EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>) : <div className="empty"><Wallet size={30}/><strong>还没有账单</strong><span>从记录第一笔消费开始吧</span></div>}
       </div>}
-      {!budgetOpen && tab === 'list' && <div key="motion-list" className="motion-page">
+      {!budgetOpen && tab === 'list' && <div key="motion-list" className={tabSwipeDirection ? 'motion-page tab-arrive-' + tabSwipeDirection : 'motion-page'}>
         <div className="ledger-v3-heading"><h2>账单明细</h2><div className="ledger-v3-actions"><button type="button" className={ledgerFiltersOpen?'is-active':''} aria-label="筛选账单" aria-expanded={ledgerFiltersOpen} onClick={()=>setLedgerFiltersOpen(v=>!v)}>筛选{ledgerHasFilters?' · 已启用':''}</button><button type="button" aria-label={ledgerView==='calendar'?'切换列表视图':'切换日历视图'} onClick={()=>{if(ledgerView==='calendar'){setLedgerView('list')}else{showCalendar();setLedgerFiltersOpen(false)}}}>{ledgerView==='calendar'?<List size={19}/>:<CalendarDays size={19}/>}</button></div></div>
         {ledgerFiltersOpen && <div className="ledger-v3-panel">
         <div className="ledger-tools">
@@ -399,7 +429,7 @@ export default function App() {
         {ledgerView==='calendar' ? <><ExpenseCalendar month={month} entries={filteredEntries} categories={categoryList} selectedDate={calendarDate} onSelectDate={date=>{setCalendarDate(date);setLedgerDate('')}} onCreateDate={date=>openEditor('new',date)} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>{filteredEntries.length===0 && <p className="calendar-filter-empty" role="status">当前条件下没有账单，可更换月份或清除筛选。</p>}</> : filteredEntries.length ? groupEntriesByDay(filteredEntries).map(day => <section key={day.date} className="day-group"><div className="day-heading"><div className="day-date"><strong>{day.date}</strong><small>{day.entries.length} 笔</small></div><span>支出 ¥{money(day.expenseMinor)}{day.incomeMinor > 0 ? ` · 收入 ¥${money(day.incomeMinor)}` : ''}</span></div>{day.entries.map(e=><EntryRow key={e.id} entry={e} categories={categoryList} onEdit={openEditor} onDeleted={()=>notifyChange('账单已删除')}/>)}</section>) : <div className="empty"><List size={30}/><strong>没有找到符合条件的账单</strong><span>可以切换月份或清除搜索</span></div>}
 
       </div>}
-      {!budgetOpen && tab === 'stats' && <div key="motion-stats" className="motion-page">
+      {!budgetOpen && tab === 'stats' && <div key="motion-stats" className={tabSwipeDirection ? 'motion-page tab-arrive-' + tabSwipeDirection : 'motion-page'}>
         <div className="stats-v2-heading"><h2>消费分析</h2><span>${monthLabel(month)}</span></div>
         <section className="stats-v2-overview">
           <div className="stats-v2-total"><small>本月总支出</small><strong>¥{money(expenses)}</strong><span>本月收入 ¥{money(income)} · 结余 ¥{money(income-expenses)}</span></div>
@@ -425,7 +455,7 @@ export default function App() {
         <div className="section-heading"><h2>消费洞察</h2><span className="meta">本地分析 · 无 AI 费用</span></div>
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
       </div>}
-      {!budgetOpen && tab === 'settings' && <div key="motion-settings" className="motion-page">
+      {!budgetOpen && tab === 'settings' && <div key="motion-settings" className={tabSwipeDirection ? 'motion-page tab-arrive-' + tabSwipeDirection : 'motion-page'}>
         {settingsPage === 'root' ? <>
           <div className="settings-v2-heading"><h2>设置</h2><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div>
           <section className="settings-v2-profile"><div className="settings-v2-brand"><div className="settings-v2-logo"><Wallet size={23}/></div><div><strong>SaveMoney</strong><span>简单记账，清楚生活</span></div><small>本地账本</small></div>
