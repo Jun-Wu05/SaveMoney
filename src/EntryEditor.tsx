@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, Ellipsis, Plus, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Delete, Ellipsis, Plus, Trash2, X } from 'lucide-react'
 import { blockSheetTouchMove } from './modalGestures'
 import { saveEntry, removeEntry, type Category, type Entry, type TransactionType } from './db'
 import { localDay, money, parseAmountMinor } from './money'
@@ -8,6 +8,7 @@ import { addCategory, updateCategoryDetails, deleteUnusedCategory } from './cate
 import { pressAmountKey, type AmountKey } from './amountKeypad'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { icons, IconPicker } from './categoryIcons'
+import { CategoryManager } from './CategoryManager'
 
 const isValidLocalDate = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
