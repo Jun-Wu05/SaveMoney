@@ -6,7 +6,7 @@ import { saveEntry, removeEntry, type Category, type Entry, type TransactionType
 import { localDay, money, parseAmountMinor } from './money'
 import { addCategory } from './categories'
 import { pressAmountKey, type AmountKey } from './amountKeypad'
-import { calculateAmount, type CalcOperator, type CalcPending } from './amountCalculator'
+import { calculateAmount, finalizeAmount, type CalcOperator, type CalcPending } from './amountCalculator'
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { icons, IconPicker } from './categoryIcons'
 import { CategoryManager } from './CategoryManager'
@@ -159,7 +159,7 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
     event.preventDefault()
     if (busy) return
     const saveAndContinue = !entry && ((event.nativeEvent as SubmitEvent).submitter as HTMLElement | null)?.dataset.action === 'again'
-    const computed = calculateAmount(pendingCalc, amount)
+    const computed = finalizeAmount(pendingCalc, amount)
     if ('error' in computed) return setError(pendingCalc ? computed.error : '请输入正确的金额，最多两位小数')
     const amountMinor = computed.amountMinor
     setAmount(computed.display)
