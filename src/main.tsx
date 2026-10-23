@@ -23,15 +23,16 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL, updateViaCache: 'none' })
       .then(registration => {
         if (registration.waiting) announceUpdate()
-        void registration.update()
         registration.addEventListener('updatefound', () => {
           const worker = registration.installing
           worker?.addEventListener('statechange', () => {
             if (worker.state === 'installed' && navigator.serviceWorker.controller) announceUpdate()
           })
         })
+        // Install the listener before checking so fast SW updates are not missed.
+        void registration.update().catch(error => console.warn('检查应用更新失败', error))
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') void registration.update()
+          if (document.visibilityState === 'visible') void registration.update().catch(error => console.warn('检查应用更新失败', error))
         })
       })
       .catch(error => console.warn('离线服务注册失败', error))
