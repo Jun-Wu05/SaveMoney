@@ -4,17 +4,17 @@ export type PwaUpdateCheckResult = 'available' | 'current' | 'inconclusive'
 export async function checkPwaUpdate(registration: ServiceWorkerRegistration, settleMs = 6500): Promise<PwaUpdateCheckResult> {
   if (registration.waiting) return 'available'
 
-  let installing: ServiceWorker | null = null
+  const tracked: { worker: ServiceWorker | null } = { worker: null }
   let settle: (() => void) | null = null
   const installed = new Promise<void>(resolve => { settle = resolve })
   const onWorkerState = () => {
-    if (installing?.state === 'installed' || installing?.state === 'redundant') settle?.()
+    if (tracked.worker?.state === 'installed' || tracked.worker?.state === 'redundant') settle?.()
   }
   const watchInstalling = () => {
     const worker = registration.installing
-    if (!worker || installing === worker) return
-    installing?.removeEventListener('statechange', onWorkerState)
-    installing = worker
+    if (!worker || tracked.worker === worker) return
+    tracked.worker?.removeEventListener('statechange', onWorkerState)
+    tracked.worker = worker
     worker.addEventListener('statechange', onWorkerState)
     onWorkerState()
   }
@@ -27,7 +27,7 @@ export async function checkPwaUpdate(registration: ServiceWorkerRegistration, se
     await registration.update()
     watchInstalling()
     if (registration.waiting) return 'available'
-    if (installing && installing.state !== 'installed' && installing.state !== 'redundant') {
+    if (tracked.worker && tracked.worker.state !== 'installed' && tracked.worker.state !== 'redundant') {
       const finished = await Promise.race([
         installed.then(() => true),
         new Promise<false>(resolve => setTimeout(() => resolve(false), settleMs)),
@@ -37,6 +37,6 @@ export async function checkPwaUpdate(registration: ServiceWorkerRegistration, se
     return registration.waiting ? 'available' : 'current'
   } finally {
     registration.removeEventListener('updatefound', onUpdateFound)
-    installing?.removeEventListener('statechange', onWorkerState)
+    tracked.worker?.removeEventListener('statechange', onWorkerState)
   }
 }
