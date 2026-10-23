@@ -44,10 +44,15 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
   const [newCategoryIcon, setNewCategoryIcon] = useState('ellipsis')
   const [categoryBusy, setCategoryBusy] = useState(false)
   const [customKeypad, setCustomKeypad] = useState(true)
-  const keypadKeys: AmountKey[] = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
+  const keypadKeys: AmountKey[] = ['7','8','9','4','5','6','1','2','3','.','0','backspace']
   const applyAmountKey = (key: AmountKey) => { setAmount(current => pressAmountKey(current,key)); setError('') }
   const startCalc = (operator: CalcOperator) => {
-    if (pendingCalc && amount.trim() === '') { setPendingCalc({ ...pendingCalc, operator }); return }
+    if (!amount.trim()) {
+      // A first tap on + or - with no amount is harmless; pending operators can be replaced.
+      if (pendingCalc) setPendingCalc({ ...pendingCalc, operator })
+      setError('')
+      return
+    }
     const result = calculateAmount(pendingCalc, amount)
     if ('error' in result) { setError(result.error); return }
     setPendingCalc({ baseMinor: result.amountMinor, operator })
@@ -55,6 +60,8 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
     setError('')
   }
   const finishCalc = () => {
+    if (!pendingCalc && !amount.trim()) { setError(''); return }
+    if (pendingCalc && !amount.trim()) { setAmount((pendingCalc.baseMinor/100).toFixed(2));setPendingCalc(null);setError('');return }
     const result = calculateAmount(pendingCalc, amount)
     if ('error' in result) { setError(result.error); return }
     setAmount(result.display)
@@ -223,17 +230,17 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
         <div className="type-toggle"><button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setCategoryId('')}}>支出</button><button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setCategoryId('')}}>收入</button></div>
         <label className="amount-label" htmlFor="amount">金额（人民币）</label>
         <div className="money-input"><span>¥</span><input id="amount" inputMode="decimal" autoComplete="off" placeholder="0.00" value={amount} readOnly={customKeypad} onChange={event => {setAmount(event.target.value);setError('')}} aria-label="记账金额" /></div>
-        <div className="amount-calc-bar" role="group" aria-label="金额加减计算">
-          <span className="amount-calc-preview" aria-live="polite">{pendingCalc ? `¥${money(pendingCalc.baseMinor)} ${pendingCalc.operator}` : '可直接加减金额'}</span>
-          <button type="button" onClick={()=>startCalc('+')} aria-label="加">＋</button>
-          <button type="button" onClick={()=>startCalc('-')} aria-label="减">−</button>
-          <button type="button" onClick={finishCalc} aria-label="等于">＝</button>
-        </div>
+        {pendingCalc && <p className="amount-calc-expression" role="status" aria-live="polite">¥{money(pendingCalc.baseMinor)} {pendingCalc.operator} {amount}</p>}
         <div className="keypad-mode"><button type="button" onClick={()=>setCustomKeypad(value=>!value)}>{customKeypad?'使用系统键盘':'使用记账数字键盘'}</button></div>
-        {customKeypad && <div className="amount-keypad" role="group" aria-label="记账数字键盘">
-          {keypadKeys.map(key=><button key={key} type="button" className={key==='backspace'?'key-backspace':''}
-            aria-label={key==='backspace'?'删除末位数字':key==='.'?'小数点':`数字${key}`}
-            onClick={()=>applyAmountKey(key)}>{key==='backspace'?<Delete size={22}/>:key}</button>)}
+        {customKeypad && <div className="amount-keypad amount-keypad-calc" role="group" aria-label="带加减运算的记账数字键盘">
+          {keypadKeys.map((key,index)=><div className="amount-keypad-digit" key={key} style={{gridColumn: (index%3)+1, gridRow: Math.floor(index/3)+1}}>
+            <button type="button" className={key==='backspace'?'key-backspace':''}
+              aria-label={key==='backspace'?'删除末位数字':key==='.'?'小数点':`数字${key}`}
+              onClick={()=>applyAmountKey(key)}>{key==='backspace'?<Delete size={22}/>:key}</button></div>)}
+          <button className="amount-keypad-op" style={{gridColumn:4,gridRow:1}} type="button" onClick={()=>{setAmount('');setPendingCalc(null);setError('')}} aria-label="清空计算">C</button>
+          <button className="amount-keypad-op" style={{gridColumn:4,gridRow:2}} type="button" onClick={()=>startCalc('+')} aria-label="加">＋</button>
+          <button className="amount-keypad-op" style={{gridColumn:4,gridRow:3}} type="button" onClick={()=>startCalc('-')} aria-label="减">−</button>
+          <button className="amount-keypad-op amount-keypad-equals" style={{gridColumn:4,gridRow:4}} type="button" onClick={finishCalc} aria-label="等于">＝</button>
         </div>}
         {!entry && lastEntryOfType(entries, type) && <button type="button" className="copy-last" onClick={() => {
           const previous = lastEntryOfType(entries, type)!
