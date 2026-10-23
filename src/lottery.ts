@@ -23,11 +23,21 @@ export async function ensureLotteryCategories() {
   })
 }
 
-export function lotteryTotals(entries: Entry[], month: string) {
-  const records = entries.filter(e => e.date.startsWith(month) && (
-    (e.type === 'expense' && e.categoryId === LOTTERY_EXPENSE_ID) ||
-    (e.type === 'income' && e.categoryId === LOTTERY_INCOME_ID)
-  ))
+/** Legacy user-created lottery categories are recognized by name and transaction type.
+ * No entries are duplicated, migrated, or modified. Other spending stays excluded.
+ */
+export function isLotteryEntry(entry: Entry, categories: Category[]) {
+  if (entry.type === 'expense' && entry.categoryId === LOTTERY_EXPENSE_ID) return true
+  if (entry.type === 'income' && entry.categoryId === LOTTERY_INCOME_ID) return true
+  const category = categories.find(c => c.id === entry.categoryId)
+  if (!category || category.type !== entry.type) return false
+  const name = category.name.trim().replace(/\\s+/g, '')
+  return entry.type === 'expense'
+    ? /^(?:彩票|彩票支出|购买彩票|彩票购买|购彩|彩票（专项）|彩票支出（专项）)$/.test(name)
+    : /^(?:彩票|彩票中奖|中奖|彩票收入|中奖收入|彩票中奖（专项）)$/.test(name)
+}
+export function lotteryTotals(entries: Entry[], month: string, categories: Category[] = []) {
+  const records = entries.filter(e => e.date.startsWith(month) && isLotteryEntry(e, categories))
   const expenseMinor = records.filter(e => e.type === 'expense').reduce((n, e) => n + e.amountMinor, 0)
   const incomeMinor = records.filter(e => e.type === 'income').reduce((n, e) => n + e.amountMinor, 0)
   return { records: records.sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)), expenseMinor, incomeMinor, netMinor: incomeMinor - expenseMinor }
@@ -41,12 +51,12 @@ export function effectiveLotteryBudget(budgets: Array<{month:string;categoryId:s
   return source ? { amountMinor:source.amountMinor, inherited:source.month!==month, sourceMonth:source.month } : null
 }
 
-export function lotteryHistory(entries:Entry[], month:string, count=6) {
+export function lotteryHistory(entries:Entry[], month:string, count=6, categories:Category[] = []) {
   const [year,m]=month.split('-').map(Number)
   return Array.from({length:count},(_,i)=>{
     const date=new Date(year,m-1-(count-1-i),1)
     const key=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`
-    const {expenseMinor,incomeMinor,netMinor}=lotteryTotals(entries,key)
+    const {expenseMinor,incomeMinor,netMinor}=lotteryTotals(entries,key,categories)
     return {month:key,expenseMinor,incomeMinor,netMinor}
   })
 }
