@@ -32,3 +32,21 @@ export function lotteryTotals(entries: Entry[], month: string) {
   const incomeMinor = records.filter(e => e.type === 'income').reduce((n, e) => n + e.amountMinor, 0)
   return { records: records.sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)), expenseMinor, incomeMinor, netMinor: incomeMinor - expenseMinor }
 }
+
+/** Reuse the most recent configured month; never propagate winnings or unused balance. */
+export function effectiveLotteryBudget(budgets: Array<{month:string;categoryId:string;amountMinor:number}>, month:string) {
+  const eligible=budgets.filter(b=>b.categoryId===LOTTERY_EXPENSE_ID && b.month<=month && b.amountMinor>0)
+    .sort((a,b)=>b.month.localeCompare(a.month))
+  const source=eligible[0]
+  return source ? { amountMinor:source.amountMinor, inherited:source.month!==month, sourceMonth:source.month } : null
+}
+
+export function lotteryHistory(entries:Entry[], month:string, count=6) {
+  const [year,m]=month.split('-').map(Number)
+  return Array.from({length:count},(_,i)=>{
+    const date=new Date(year,m-1-(count-1-i),1)
+    const key=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`
+    const {expenseMinor,incomeMinor,netMinor}=lotteryTotals(entries,key)
+    return {month:key,expenseMinor,incomeMinor,netMinor}
+  })
+}

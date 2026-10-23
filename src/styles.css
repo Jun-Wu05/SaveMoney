@@ -896,3 +896,15 @@
   max-width:110px;
   font-size:clamp(23px,7vw,33px);
 }
+
+/* Lottery historical ledger: compact even on small iPhones. */
+.lottery-history{overflow:hidden}
+.lottery-history-table{width:100%;font-variant-numeric:tabular-nums}
+.lottery-history-row{display:grid;grid-template-columns:.65fr 1fr 1fr 1.15fr;gap:5px;align-items:center;padding:11px 0;border-bottom:1px solid #eef1ec;color:#536055;font-size:11px}
+.lottery-history-head{font-size:10px;color:#8d9a8e;font-weight:600}
+.lottery-history-row>span:not(:first-child),.lottery-history-row>strong{text-align:right;white-space:nowrap}
+.lottery-history-row strong{color:#29372d;font-weight:650;font-size:11px}
+.lottery-history-row strong.lottery-income{color:#527d66}
+.lottery-history-summary{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-top:14px;color:#839185;font-size:11px}
+.lottery-history-summary strong{font-size:16px;color:#283b2d;font-variant-numeric:tabular-nums}
+@media(max-width:360px){.lottery-history-row{font-size:10px;gap:3px}.lottery-history-row strong{font-size:10px}}
