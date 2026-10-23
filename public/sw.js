@@ -3,7 +3,7 @@ const CACHE = '__BUILD_CACHE_NAME__'
 const BASE = self.registration.scope
 const PRECACHE = '__PRECACHE_ASSETS__'
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([BASE, BASE + 'manifest.webmanifest', BASE + 'icon.svg', ...PRECACHE])))
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([BASE, BASE + 'manifest.webmanifest', BASE + 'icon.svg', BASE + 'apple-touch-icon.png', BASE + 'icon-192.png', BASE + 'icon-512.png', ...PRECACHE])))
 })
 self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting() })
 self.addEventListener('activate', event => {
