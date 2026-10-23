@@ -718,3 +718,8 @@
 .swipe-entry-content{will-change:auto}
 .swipe-entry.is-dragging .swipe-entry-content{will-change:transform;transition:none}
 @media(prefers-reduced-motion:reduce){.swipe-entry.is-dragging .swipe-entry-content{transition:none}}
+
+/* iPhone settings: edge-only back gesture, preserve native vertical scrolling. */
+.settings-swipe-viewport{overflow-x:clip;min-width:0}
+.settings-swipe-page{min-width:0;touch-action:pan-y;will-change:transform;transition:transform 220ms cubic-bezier(.2,.8,.2,1)}
+.settings-swipe-page.is-dragging{transition:none}
