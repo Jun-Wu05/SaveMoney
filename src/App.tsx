@@ -439,8 +439,11 @@ export default function App() {
   const [backupBusy, setBackupBusy] = useState(false)
   const [updateReady, setUpdateReady] = useState(false)
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('savemoney-last-backup-created'))
+  const [confirmedBackup, setConfirmedBackup] = useState(() => localStorage.getItem('savemoney-last-backup-confirmed'))
+  const [verificationStatus, setVerificationStatus] = useState('')
   const backupAgeDays = lastBackup && Number.isFinite(Date.parse(lastBackup)) ? Math.max(0,Math.floor((Date.now()-Date.parse(lastBackup))/86_400_000)) : null
-  const backupReminder = backupAgeDays === null || backupAgeDays >= 7
+  const confirmedAgeDays = confirmedBackup && Number.isFinite(Date.parse(confirmedBackup)) ? Math.max(0, Math.floor((Date.now() - Date.parse(confirmedBackup)) / 86_400_000)) : null
+  const backupReminder = confirmedAgeDays === null || confirmedAgeDays >= 7
   useEffect(() => { const callback = () => setUpdateReady(true); window.addEventListener('savemoney-update-ready', callback); return () => window.removeEventListener('savemoney-update-ready', callback) }, [])
   useEffect(() => { initializeCategories().catch(() => setInitError(true)) }, [])
   useEffect(() => { setCalendarDate(null) }, [month])
@@ -521,6 +524,18 @@ export default function App() {
     try { await removeMonthlyBudget(month) }
     catch { setBudgetError('取消预算失败') }
     finally { setBudgetBusy(false) }
+  }
+
+  async function verifyBackup(file?: File) {
+    if (!file || backupBusy) return
+    setVerificationStatus('')
+    if (file.size > 20_000_000) { setVerificationStatus('文件过大，无法校验'); return }
+    setBackupBusy(true)
+    try {
+      const backup = validateBackupText(await file.text())
+      setVerificationStatus(`校验通过：${backup.entries.length} 笔账单、${backup.categories.length} 个分类。此操作不会修改当前账本。`)
+    } catch (error) { setVerificationStatus(error instanceof Error ? `校验失败：${error.message}` : '校验失败') }
+    finally { setBackupBusy(false) }
   }
 
   async function chooseBackup(file?: File) {
@@ -668,7 +683,7 @@ export default function App() {
             <button onClick={() => openSettingsPage('data')}><DatabaseBackup size={19}/><span><strong>数据管理</strong><small>{backupReminder ? '建议备份 · 点击查看' : '备份、恢复与导入导出'}</small></span><ChevronRight size={17}/></button>
             <button onClick={() => openSettingsPage('preferences')}><SlidersHorizontal size={19}/><span><strong>记账偏好</strong><small>账单默认显示方式</small></span><ChevronRight size={17}/></button>
           </section>
-          {backupReminder && <button type="button" className="backup-v2-reminder" onClick={() => openSettingsPage('data')}><ShieldCheck size={18}/><span><strong>{backupAgeDays === null ? '还没有生成完整备份' : `距离上次生成备份已 ${backupAgeDays} 天`}</strong><small>建议每周导出 JSON 并保存到文件或 iCloud</small></span><ChevronRight size={16}/></button>}
+          {backupReminder && <button type="button" className="backup-v2-reminder" onClick={() => openSettingsPage('data')}><ShieldCheck size={18}/><span><strong>{backupAgeDays === null ? '尚未确认已保存完整备份' : `距离上次确认保存备份已 ${confirmedAgeDays} 天`}</strong><small>建议每周导出 JSON 并保存到文件或 iCloud</small></span><ChevronRight size={16}/></button>}
           <div className="settings-v2-group-title">应用</div>
           <section className="settings-v2-menu">
             <button onClick={() => openSettingsPage('privacy')}><ShieldCheck size={19}/><span><strong>隐私与数据安全</strong></span><ChevronRight size={17}/></button>
@@ -678,7 +693,15 @@ export default function App() {
           <button className="settings-v2-back" type="button" onClick={() => openSettingsPage('root')}><ChevronLeft size={19}/> 返回设置</button>
           <h2 className="settings-v2-page-title">{{data:'数据管理',categories:'分类管理',preferences:'记账偏好',help:'帮助中心',privacy:'隐私与数据安全',about:'关于 SaveMoney'}[settingsPage]}</h2>
           {settingsPage === 'data' && <>
-            <div className="setting-card"><h3>备份状态</h3><p>{backupAgeDays !== null && lastBackup ? `上次生成：${new Date(lastBackup).toLocaleString('zh-CN')}（${backupAgeDays} 天前）` : '尚未生成完整 JSON 备份'}</p><p>{backupReminder ? '建议现在导出一份完整备份。' : '建议每周更新完整备份。'}生成记录仅保存在当前设备，无法检测文件是否实际保存；请到「文件」App 或 iCloud Drive 确认。</p></div>
+            <div className="setting-card"><h3>备份状态</h3>
+        <p>{lastBackup ? `最近生成：${new Date(lastBackup).toLocaleString('zh-CN')}` : '尚未生成完整 JSON 备份'}</p>
+        <p>{confirmedBackup ? `最近确认保存：${new Date(confirmedBackup).toLocaleString('zh-CN')}` : '尚未确认任何备份文件已保存到设备外的安全位置'}</p>
+        <p>{backupReminder ? '建议导出并确认保存一份完整备份。' : '建议每周更新完整备份。'} 生成下载不代表文件已经保存，确认状态仅由你手动记录，应用无法验证 iCloud 中的文件。</p>
+        <button type="button" disabled={backupBusy || !lastBackup || (confirmedBackup !== null && confirmedBackup >= lastBackup)} onClick={() => { if (!lastBackup || !window.confirm('请先在「文件」App 或 iCloud Drive 确认备份 JSON 文件已保存且可找到。确认已保存吗？')) return; localStorage.setItem('savemoney-last-backup-confirmed', lastBackup); setConfirmedBackup(lastBackup) }}>我已确认备份文件保存成功</button>
+        <p>可选择已保存的 JSON 文件校验格式与内容，校验不会覆盖或修改账本。</p>
+        <label className="file-label">校验 JSON 备份文件<input type="file" accept="application/json,.json" disabled={backupBusy} onChange={e => { void verifyBackup(e.target.files?.[0]); e.target.value='' }} /></label>
+        {verificationStatus && <p role="status">{verificationStatus}</p>}
+      </div>
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；Excel 按月份分 Sheet 并包含汇总，CSV 包含全量账单及总计；仅 JSON 可完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
