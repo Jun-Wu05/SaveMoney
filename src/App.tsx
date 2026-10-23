@@ -121,49 +121,6 @@ function EntryRow({ entry, categories, onEdit, onDeleted }: { entry: Entry; cate
 
 
 
-function SettingsSwipeBack({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
-  const start = useRef<{ x: number; y: number; axis: 'pending' | 'horizontal' | 'vertical' } | null>(null)
-  const [offset, setOffset] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const [returning, setReturning] = useState(false)
-  const offsetRef = useRef(0)
-  const reset = () => { start.current = null; setDragging(false); setReturning(true); offsetRef.current = 0; setOffset(0) }
-  return <div className="settings-swipe-viewport">
-    <div className={dragging ? 'settings-swipe-page is-dragging' : 'settings-swipe-page'}
-      style={{ transform: `translate3d(${offset}px,0,0)` }}
-      onTransitionEnd={() => { if (returning) setReturning(false) }}
-      onTouchStart={event => {
-        if (event.touches.length !== 1 || event.touches[0].clientX > 24 || returning) return
-        const touch = event.touches[0]
-        start.current = { x: touch.clientX, y: touch.clientY, axis: 'pending' }
-      }}
-      onTouchMove={event => {
-        if (!start.current || event.touches.length !== 1) return
-        const touch = event.touches[0]
-        const dx = touch.clientX - start.current.x
-        const dy = touch.clientY - start.current.y
-        if (start.current.axis === 'pending') {
-          if (Math.max(Math.abs(dx), Math.abs(dy)) < 10) return
-          start.current.axis = dx > 0 && dx > Math.abs(dy) * 1.6 ? 'horizontal' : 'vertical'
-        }
-        if (start.current.axis !== 'horizontal') return
-        const next = Math.min(window.innerWidth, Math.max(0, dx))
-        offsetRef.current = next
-        setDragging(true)
-        setOffset(next)
-      }}
-      onTouchEnd={() => {
-        if (!start.current) return
-        const completed = start.current.axis === 'horizontal' && offsetRef.current >= 80
-        reset()
-        if (completed) onBack()
-      }}
-      onTouchCancel={reset}>
-      {children}
-    </div>
-  </div>
-}
-
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [settingsPage, setSettingsPage] = useState<'root'|'data'|'categories'|'preferences'|'help'|'privacy'|'about'>('root')
@@ -239,6 +196,56 @@ export default function App() {
   const openCategoryBills = (ids: string[]) => { setDrilldownIds(ids); setAllMonths(false); setSearchTerm(''); setFilterType('expense'); setBudgetOpen(false); setTab('list') }
   const goToTab = (next: Tab) => {setBudgetOpen(false);setTab(next);if(next === 'settings')setSettingsPage('root');if(next === 'list'){setLedgerView('calendar');setLedgerFiltersOpen(false)};window.scrollTo(0,0)}
   const openSettingsPage = (page: typeof settingsPage) => {setSettingsPage(page);window.scrollTo(0,0)}
+  // One gesture owner for the entire main view. iOS standalone PWA does not
+  // consistently deliver Safari's native navigation gesture to web content.
+  const navigationTouch = useRef<{x:number;y:number;axis:'pending'|'horizontal'|'vertical';enabled:boolean}|null>(null)
+  const [navigationOffset,setNavigationOffset] = useState(0)
+  const [navigationDragging,setNavigationDragging] = useState(false)
+  const navigationOffsetRef = useRef(0)
+  const onNavigationTouchStart = (event: React.TouchEvent<HTMLElement>) => {
+    if (event.touches.length !== 1 || editing || budgetOpen) return
+    const touch=event.touches[0]
+    const target=event.target as HTMLElement
+    // Do not steal the ledger's swipe-to-delete or interactive controls.
+    if (target.closest('.swipe-entry, input, textarea, select, [contenteditable="true"], .expense-calendar, .calendar-grid')) return
+    // On root pages avoid Safari's system back edge; subpages accept either direction.
+    if (settingsPage === 'root' && touch.clientX < 28) return
+    navigationTouch.current={x:touch.clientX,y:touch.clientY,axis:'pending',enabled:true}
+  }
+  const onNavigationTouchMove = (event: React.TouchEvent<HTMLElement>) => {
+    const start=navigationTouch.current
+    if (!start || event.touches.length !== 1) return
+    const touch=event.touches[0],dx=touch.clientX-start.x,dy=touch.clientY-start.y
+    if (start.axis==='pending') {
+      if (Math.max(Math.abs(dx),Math.abs(dy))<12) return
+      start.axis=Math.abs(dx)>Math.abs(dy)*1.65?'horizontal':'vertical'
+    }
+    if(start.axis!=='horizontal') return
+    const index=nav.findIndex(n=>n.id===tab)
+    const canNavigate=settingsPage!=='root' || (dx<0?index<nav.length-1:index>0)
+    if(!canNavigate)return
+    const next=Math.max(-110,Math.min(110,dx))
+    navigationOffsetRef.current=next
+    setNavigationDragging(true)
+    setNavigationOffset(next)
+  }
+  const onNavigationTouchEnd = () => {
+    const start=navigationTouch.current
+    navigationTouch.current=null
+    const distance=navigationOffsetRef.current
+    navigationOffsetRef.current=0
+    setNavigationDragging(false)
+    setNavigationOffset(0)
+    if (!start || start.axis!=='horizontal' || Math.abs(distance)<65) return
+    if (tab==='settings' && settingsPage!=='root') {
+      openSettingsPage('root')
+      return
+    }
+    const index=nav.findIndex(n=>n.id===tab)
+    const next=nav[index+(distance<0?1:-1)]
+    if(next)goToTab(next.id)
+  }
+
 
   async function saveCategoryBudgetForm(event: React.FormEvent) {
     event.preventDefault()
@@ -354,7 +361,7 @@ export default function App() {
     {updateReady && !editing && !backupBusy && !pendingBackup && <div className="app-update-banner" role="status"><span>发现新版本。请确认当前账单已保存后更新。</span><button onClick={() => window.dispatchEvent(new Event('savemoney-approve-update'))}>立即更新</button></div>}
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
-    <main className="content">
+    <main className={navigationDragging ? "content gesture-content is-dragging" : "content gesture-content"} style={{transform: `translate3d(${navigationOffset}px,0,0)`}} onTouchStart={onNavigationTouchStart} onTouchMove={onNavigationTouchMove} onTouchEnd={onNavigationTouchEnd} onTouchCancel={onNavigationTouchEnd}>
       {(budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
       {!budgetOpen && tab === 'home' && <div key="motion-home" className="motion-page">
         <div className="hero"><p>本月支出</p><h1>¥ {money(expenses)}</h1><div className="hero-grid"><div><small>本月收入</small><strong>¥ {money(income)}</strong></div><div><small>本月结余</small><strong>¥ {money(income - expenses)}</strong></div></div></div>
@@ -442,7 +449,7 @@ export default function App() {
             <button onClick={() => openSettingsPage('privacy')}><ShieldCheck size={19}/><span><strong>隐私与数据安全</strong></span><ChevronRight size={17}/></button>
             <button onClick={() => openSettingsPage('about')}><Info size={19}/><span><strong>关于 SaveMoney</strong></span><ChevronRight size={17}/></button>
           </section><p className="settings-v2-footer">SaveMoney · 免费 · 本地优先</p>
-        </> : <SettingsSwipeBack onBack={() => openSettingsPage('root')}>
+        </> : <>
           <button className="settings-v2-back" type="button" onClick={() => openSettingsPage('root')}><ChevronLeft size={19}/> 返回设置</button>
           <h2 className="settings-v2-page-title">{{data:'数据管理',categories:'分类管理',preferences:'记账偏好',help:'帮助中心',privacy:'隐私与数据安全',about:'关于 SaveMoney'}[settingsPage]}</h2>
           {settingsPage === 'data' && <>
@@ -500,7 +507,7 @@ export default function App() {
           </div>}
           {settingsPage === 'privacy' && <div className="setting-card"><h3>本地优先</h3><p>账单仅保存在当前设备浏览器的 IndexedDB 中，不会发送到开发者服务器。</p><h3 className="settings-v2-subheading">请定期备份</h3><p>清除网站数据、卸载应用或更换手机可能导致账本丢失。请在数据管理中导出 JSON 并保存到安全位置。</p><button className="settings-v2-inline-link" onClick={() => openSettingsPage('data')}>前往数据管理 <ChevronRight size={15}/></button></div>}
           {settingsPage === 'about' && <div className="setting-card"><h3>SaveMoney 1.0</h3><p>免费、简洁、本地优先的个人记账工具。</p><p>支持日常记账、分类预算、消费统计及本地备份。</p></div>}
-        </SettingsSwipeBack>}
+        </>}
       </div>}
       {budgetOpen && <section className="budget-detail">
         <button type="button" className="back-link" onClick={() => setBudgetOpen(false)}><ChevronLeft size={18}/> 返回首页</button>
