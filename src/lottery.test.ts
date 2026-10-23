@@ -56,3 +56,28 @@ describe('lottery six-month history',()=>{
     expect(result[4].netMinor).toBe(3000)
   })
 })
+
+describe('existing lottery categories share the main entry ledger',()=>{
+  const categories=[
+    {id:'old-lottery-expense',name:'彩票',type:'expense',icon:'ticket',sortOrder:1},
+    {id:'old-lottery-income',name:'彩票',type:'income',icon:'gift',sortOrder:1},
+    {id:'food',name:'餐饮',type:'expense',icon:'food',sortOrder:2},
+  ] as import('./db').Category[]
+  it('recognizes old income and expenses without copying entries',()=>{
+    const records=[
+      row('old1','expense','old-lottery-expense',18100),
+      row('old2','income','old-lottery-income',27600),
+      row('new','expense',LOTTERY_EXPENSE_ID,10000),
+      row('food','expense','food',5200),
+    ]
+    const result=lotteryTotals(records,'2026-10',categories)
+    expect(result.expenseMinor).toBe(28100)
+    expect(result.incomeMinor).toBe(27600)
+    expect(result.records.map(r=>r.id).sort()).toEqual(['new','old1','old2'])
+    expect(records).toHaveLength(4)
+  })
+  it('also includes old categories in monthly history',()=>{
+    const result=lotteryHistory([row('old','income','old-lottery-income',1000,'2026-09-02')],'2026-10',2,categories)
+    expect(result[0].incomeMinor).toBe(1000)
+  })
+})
