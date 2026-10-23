@@ -835,3 +835,10 @@
 .lottery-record .lottery-income{color:#527d66}
 .lottery-empty{font-size:12px;color:#98a198;text-align:center;padding:28px 0}
 @media(max-width:360px){.lottery-home-metrics{gap:8px}.lottery-actions{gap:6px}.lottery-actions button{font-size:12px}}
+
+/* Lightweight calculator actions preserve the existing three-column keypad. */
+.amount-calc-bar{display:flex;align-items:center;gap:7px;margin:-8px 0 12px;min-width:0}
+.amount-calc-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#7d8c7e;font-variant-numeric:tabular-nums}
+.amount-calc-bar button{flex:none;display:grid;place-items:center;width:40px;height:36px;border:1px solid #dde7da;border-radius:10px;background:#e8eee6;color:#446e54;font-size:19px;font-weight:650;touch-action:manipulation}
+.amount-calc-bar button:last-child{background:#527d66;color:white;border-color:#527d66}
+@media(max-width:360px){.amount-calc-bar{gap:5px}.amount-calc-bar button{width:36px}}
