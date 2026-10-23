@@ -1,6 +1,11 @@
 import type { Entry } from './db'
 
 export type CalendarDay = { date: string; day: number; expenseMinor: number; incomeMinor: number; count: number }
+/** Daily net in cents: income minus spending; independent of gross spending. */
+export function calendarNetMinor(day: Pick<CalendarDay, 'incomeMinor' | 'expenseMinor'>) {
+  return day.incomeMinor - day.expenseMinor
+}
+
 export function monthDays(month: string): CalendarDay[] {
   const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(month)
   if (!match) throw new Error('月份格式不正确')
