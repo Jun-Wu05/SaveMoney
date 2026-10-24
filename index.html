@@ -11,24 +11,25 @@
     <meta name="theme-color" content="#f7f7f2" />
     <meta name="description" content="SaveMoney：简单、私密的本地记账工具" />
     <style>
-      /* First-paint splash is inline so it appears before the React bundle or CSS loads. */
-      #sm-launch{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#f7f7f2;color:#202522;padding:calc(20px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;transition:opacity 190ms ease;pointer-events:none}
+      /* Inline: the first branded frame appears before the app bundle downloads. */
+      #sm-launch{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;background:#f7f7f2;color:#202522;padding:calc(20px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom));font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;-webkit-font-smoothing:antialiased;pointer-events:none;opacity:1;transition:opacity 230ms ease}
       #sm-launch.sm-launch-leaving{opacity:0}
-      #sm-launch .sm-launch-mark{width:78px;height:78px;border-radius:24px;display:grid;place-items:center;background:#527d66;color:white;font-size:45px;font-weight:300;line-height:1;box-shadow:0 12px 29px rgba(54,91,69,.13)}
-      #sm-launch .sm-launch-name{font:750 27px/1.2 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:-1.1px}
+      #sm-launch .sm-launch-logo{position:relative;display:grid;place-items:center;width:86px;height:86px;margin-bottom:8px}
+      #sm-launch .sm-launch-ring{position:absolute;inset:-9px;border:1.5px solid rgba(82,125,102,.28);border-radius:30px;opacity:0;animation:sm-ring 850ms cubic-bezier(.2,.7,.2,1) 170ms both}
+      #sm-launch .sm-launch-mark{display:grid;place-items:center;width:78px;height:78px;border-radius:24px;background:#527d66;color:#fff;font-size:44px;font-weight:300;line-height:1;box-shadow:0 12px 29px rgba(54,91,69,.13);animation:sm-mark 640ms cubic-bezier(.2,1.1,.32,1) both}
+      #sm-launch .sm-launch-name{font-size:27px;font-weight:750;line-height:1.2;letter-spacing:-1.1px;animation:sm-copy 500ms ease-out 220ms both}
       #sm-launch .sm-launch-name b{color:#527d66}
-      #sm-launch .sm-launch-tagline{font:12px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#98a198;letter-spacing:1px}
-      #sm-launch .sm-launch-mark,#sm-launch .sm-launch-name,#sm-launch .sm-launch-tagline{animation:sm-launch-appear 380ms ease-out both}
-      #sm-launch .sm-launch-name{animation-delay:70ms}
-      #sm-launch .sm-launch-tagline{animation-delay:120ms}
-      @keyframes sm-launch-appear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-      @media(prefers-reduced-motion:reduce){#sm-launch,#sm-launch *{animation:none!important;transition:none!important}}
+      #sm-launch .sm-launch-tagline{font-size:12px;line-height:1.6;color:#98a198;letter-spacing:1px;animation:sm-copy 500ms ease-out 340ms both}
+      @keyframes sm-mark{0%{opacity:0;transform:translateY(12px) scale(.78)}65%{opacity:1;transform:translateY(-2px) scale(1.04)}100%{opacity:1;transform:translateY(0) scale(1)}}
+      @keyframes sm-ring{0%{opacity:0;transform:scale(.76)}35%{opacity:.65}100%{opacity:0;transform:scale(1.24)}}
+      @keyframes sm-copy{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+      @media(prefers-reduced-motion:reduce){#sm-launch,#sm-launch *{animation:none!important;transition:none!important}#sm-launch .sm-launch-ring{display:none}}
     </style>
     <title>SaveMoney · 小账本</title>
   </head>
   <body>
     <div id="sm-launch" role="status" aria-label="SaveMoney 正在启动">
-      <div class="sm-launch-mark" aria-hidden="true">¥</div>
+      <div class="sm-launch-logo" aria-hidden="true"><div class="sm-launch-ring"></div><div class="sm-launch-mark">¥</div></div>
       <div class="sm-launch-name">SaveMoney<b>.</b></div>
       <div class="sm-launch-tagline">花了多少，心里有数</div>
     </div>

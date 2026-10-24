@@ -13,9 +13,14 @@ function LaunchReady() {
       frame2 = requestAnimationFrame(() => {
         const splash = document.getElementById('sm-launch')
         if (!splash) return
-        splash.classList.add('sm-launch-leaving')
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        timer = window.setTimeout(() => splash.remove(), reducedMotion ? 0 : 210)
+        // Let the short brand motion complete while React becomes interactive.
+        // Never delay an accessibility-requested reduced-motion launch.
+        const remaining = reducedMotion ? 0 : Math.max(0, 980 - performance.now())
+        timer = window.setTimeout(() => {
+          splash.classList.add('sm-launch-leaving')
+          timer = window.setTimeout(() => splash.remove(), reducedMotion ? 0 : 240)
+        }, remaining)
       })
     })
     return () => { cancelAnimationFrame(frame1); cancelAnimationFrame(frame2); clearTimeout(timer) }
