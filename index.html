@@ -10,9 +10,28 @@
     <meta name="apple-mobile-web-app-title" content="SaveMoney" />
     <meta name="theme-color" content="#f7f7f2" />
     <meta name="description" content="SaveMoney：简单、私密的本地记账工具" />
+    <style>
+      /* First-paint splash is inline so it appears before the React bundle or CSS loads. */
+      #sm-launch{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#f7f7f2;color:#202522;padding:calc(20px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased;transition:opacity 190ms ease;pointer-events:none}
+      #sm-launch.sm-launch-leaving{opacity:0}
+      #sm-launch .sm-launch-mark{width:78px;height:78px;border-radius:24px;display:grid;place-items:center;background:#527d66;color:white;font-size:45px;font-weight:300;line-height:1;box-shadow:0 12px 29px rgba(54,91,69,.13)}
+      #sm-launch .sm-launch-name{font:750 27px/1.2 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:-1.1px}
+      #sm-launch .sm-launch-name b{color:#527d66}
+      #sm-launch .sm-launch-tagline{font:12px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#98a198;letter-spacing:1px}
+      #sm-launch .sm-launch-mark,#sm-launch .sm-launch-name,#sm-launch .sm-launch-tagline{animation:sm-launch-appear 380ms ease-out both}
+      #sm-launch .sm-launch-name{animation-delay:70ms}
+      #sm-launch .sm-launch-tagline{animation-delay:120ms}
+      @keyframes sm-launch-appear{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+      @media(prefers-reduced-motion:reduce){#sm-launch,#sm-launch *{animation:none!important;transition:none!important}}
+    </style>
     <title>SaveMoney · 小账本</title>
   </head>
   <body>
+    <div id="sm-launch" role="status" aria-label="SaveMoney 正在启动">
+      <div class="sm-launch-mark" aria-hidden="true">¥</div>
+      <div class="sm-launch-name">SaveMoney<b>.</b></div>
+      <div class="sm-launch-tagline">花了多少，心里有数</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

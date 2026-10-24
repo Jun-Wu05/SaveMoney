@@ -3,8 +3,28 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './styles.css'
 
+/** Remove first-paint splash only after React has committed and the browser can paint. */
+function LaunchReady() {
+  React.useEffect(() => {
+    let frame1 = 0
+    let frame2 = 0
+    let timer = 0
+    frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => {
+        const splash = document.getElementById('sm-launch')
+        if (!splash) return
+        splash.classList.add('sm-launch-leaving')
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        timer = window.setTimeout(() => splash.remove(), reducedMotion ? 0 : 210)
+      })
+    })
+    return () => { cancelAnimationFrame(frame1); cancelAnimationFrame(frame2); clearTimeout(timer) }
+  }, [])
+  return <App />
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><App /></React.StrictMode>,
+  <React.StrictMode><LaunchReady /></React.StrictMode>,
 )
 
 const announceUpdate = () => window.dispatchEvent(new Event('savemoney-update-ready'))
