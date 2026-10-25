@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Ticket, TrendingDown, TrendingUp } from 'lucide-react'
 import { money } from './money'
 import { parseAmountMinor } from './money'
@@ -26,6 +26,7 @@ type Props = {
 }
 
 export function LotteryPage({ entries, categories, month, onMonthChange, budgetMinor, inheritedBudgetFrom, onBack, onQuickRecord, onEdit }: Props) {
+  const budgetInputRef = useRef<HTMLInputElement>(null)
   const [budgetEdit, setBudgetEdit] = useState(false)
   const [budgetInput, setBudgetInput] = useState('')
   const [busy, setBusy] = useState(false)
@@ -42,6 +43,7 @@ export function LotteryPage({ entries, categories, month, onMonthChange, budgetM
     setBusy(true); setBudgetError('')
     try {
       await setCategoryBudget(month, LOTTERY_EXPENSE_ID, budgetInput)
+      budgetInputRef.current?.blur()
       setBudgetEdit(false)
     } catch (e) { setBudgetError(e instanceof Error ? e.message : '预算保存失败') }
     finally { setBusy(false) }
@@ -52,14 +54,14 @@ export function LotteryPage({ entries, categories, month, onMonthChange, budgetM
     <div className="lottery-month"><button aria-label="上个月" onClick={()=>onMonthChange(monthShift(month,-1))}><ChevronLeft size={20}/></button><strong>{month.slice(0,4)} 年 {Number(month.slice(5))} 月</strong><button aria-label="下个月" onClick={()=>onMonthChange(monthShift(month,1))}><ChevronRight size={20}/></button></div>
     <section className="lottery-net-card"><div className="lottery-card-label">本月净盈亏</div><strong className="lottery-net-number">{netMinor > 0 ? '+' : netMinor < 0 ? '−' : ''}¥{money(Math.abs(netMinor))}</strong><div className="lottery-totals"><div><span><TrendingDown size={15}/> 彩票投入</span><b>¥{money(expenseMinor)}</b></div><div><span><TrendingUp size={15}/> 中奖收入</span><b>¥{money(incomeMinor)}</b></div></div></section>
     <section className="lottery-budget-card">
-      <div className="lottery-card-head"><strong>购买彩票预算</strong><button type="button" onClick={()=>{setBudgetInput(budgetMinor ? (budgetMinor/100).toFixed(2) : '1000');setBudgetError('');setBudgetEdit(!budgetEdit)}}>{budgetEdit ? '取消' : budgetMinor === null ? '设置预算' : '调整预算'}</button></div>
+      <div className="lottery-card-head"><strong>购买彩票预算</strong><button type="button" onClick={()=>{if(budgetEdit) budgetInputRef.current?.blur();setBudgetInput(budgetMinor ? (budgetMinor/100).toFixed(2) : '1000');setBudgetError('');setBudgetEdit(!budgetEdit)}}>{budgetEdit ? '取消' : budgetMinor === null ? '设置预算' : '调整预算'}</button></div>
       {budgetMinor === null ? <p className="lottery-muted">还未设置本月彩票预算。建议为购买金额设定独立上限。</p> : <>
         <div className="lottery-budget-values"><strong>¥{money(expenseMinor)} <small>/ ¥{money(budgetMinor)}</small></strong><span>{remaining !== null && remaining >= 0 ? `剩余 ¥${money(remaining)}` : `已超出 ¥${money(Math.abs(remaining ?? 0))}`}</span></div>
         <div className="lottery-progress" role="progressbar" aria-label="彩票预算使用率" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><div style={{width:`${progress}%`}}/></div>
       </>}
       <p className="lottery-muted">{inheritedBudgetFrom ? `本月沿用 ${inheritedBudgetFrom} 设置的预算额度；可单独调整。` : '中奖金额不会增加购彩预算。'}</p>
       <p className="lottery-muted">后续月份自动沿用最近一次设置的额度，不结转上月剩余，也不以中奖抵扣预算。</p>
-      {budgetEdit && <form className="lottery-budget-form" onSubmit={e=>void saveBudget(e)}><label htmlFor="lottery-budget-input">本月预算（元）</label><div><input id="lottery-budget-input" inputMode="decimal" type="text" placeholder="例如 1000" value={budgetInput} onChange={e=>setBudgetInput(e.target.value)}/><button type="submit" disabled={busy}>{busy ? '保存中…' : '保存预算'}</button></div>{budgetError && <p className="error" role="alert">{budgetError}</p>}</form>}
+      {budgetEdit && <form className="lottery-budget-form" onSubmit={e=>void saveBudget(e)}><label htmlFor="lottery-budget-input">本月预算（元）</label><div><input ref={budgetInputRef} id="lottery-budget-input" inputMode="decimal" type="text" placeholder="例如 1000" value={budgetInput} onChange={e=>setBudgetInput(e.target.value)}/><button type="submit" disabled={busy}>{busy ? '保存中…' : '保存预算'}</button></div>{budgetError && <p className="error" role="alert">{budgetError}</p>}</form>}
     </section>
     <div className="lottery-actions"><button type="button" onClick={()=>onQuickRecord('expense')}>− 记彩票支出</button><button type="button" onClick={()=>onQuickRecord('income')}>＋ 记录中奖</button></div>
     <section className="lottery-records lottery-history">
