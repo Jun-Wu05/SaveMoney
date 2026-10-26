@@ -14,12 +14,12 @@ function LaunchReady() {
         const splash = document.getElementById('sm-launch')
         if (!splash) return
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        // Let the short brand motion complete while React becomes interactive.
+        // Give the logo, ring and tagline a visible moment before entering the app.
         // Never delay an accessibility-requested reduced-motion launch.
-        const remaining = reducedMotion ? 0 : Math.max(0, 980 - performance.now())
+        const remaining = reducedMotion ? 0 : Math.max(0, 1500 - performance.now())
         timer = window.setTimeout(() => {
           splash.classList.add('sm-launch-leaving')
-          timer = window.setTimeout(() => splash.remove(), reducedMotion ? 0 : 240)
+          timer = window.setTimeout(() => splash.remove(), reducedMotion ? 0 : 280)
         }, remaining)
       })
     })
