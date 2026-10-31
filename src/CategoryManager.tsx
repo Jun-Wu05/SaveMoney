@@ -37,7 +37,8 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
     let raf = 0
     dragRef.current = { id, pointerId: event.pointerId, startY, moved: false }
     // Keep the real row in the list: no cloned card, no empty placeholder.
-    row.dataset.dragActive = 'true'\n    row.style.position = 'relative'
+    row.dataset.dragActive = 'true'
+    row.style.position = 'relative'
     row.style.zIndex = '3'
     row.style.willChange = 'transform'
     row.style.background = '#f4f8f2'
@@ -88,7 +89,8 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
       row.style.position = ''
       row.style.zIndex = ''
       row.style.willChange = ''
-      delete row.dataset.dragActive\n      row.style.background = ''
+      delete row.dataset.dragActive
+      row.style.background = ''
       row.style.boxShadow = ''
       row.style.borderRadius = ''
     }
