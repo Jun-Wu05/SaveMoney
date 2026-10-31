@@ -24,72 +24,86 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
   function onDragStart(event: React.PointerEvent<HTMLButtonElement>, id: string) {
     if (busy || editingId || dragRef.current) return
     const row = event.currentTarget.closest<HTMLElement>('[data-category-sort-id]')
-    if (!row) return
-    const rect = row.getBoundingClientRect()
-    const ids = shown.map(c => c.id)
-    dragRef.current = { id, pointerId: event.pointerId, startY: event.clientY, moved: false }
-    setDraggingId(id)
-    const ghost = row.cloneNode(true) as HTMLElement
-    ghost.removeAttribute('data-category-sort-id')
-    Object.assign(ghost.style, {
-      position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
-      width: rect.width + 'px', height: rect.height + 'px', margin: '0',
-      zIndex: '9999', pointerEvents: 'none', transform: 'scale(1.02)',
-      boxShadow: '0 10px 28px rgba(0,0,0,.18)', background: '#fff',
-      borderRadius: '12px', willChange: 'transform'
-    })
-    document.body.appendChild(ghost)
-    let y = event.clientY
+    const list = row?.parentElement
+    if (!row || !list) return
+    const rows = Array.from(list.querySelectorAll<HTMLElement>('[data-category-sort-id]'))
+    const ids = rows.map(el => el.dataset.categorySortId ?? '')
+    const startIndex = ids.indexOf(id)
+    const startY = event.clientY
+    const rowHeight = row.getBoundingClientRect().height
+    const centers = rows.map(el => { const rect = el.getBoundingClientRect(); return rect.top + rect.height / 2 })
+    let currentY = startY
+    let targetIndex = startIndex
+    let moved = false
     let raf = 0
-    let lastTarget = ''
+    dragRef.current = { id, pointerId: event.pointerId, startY, moved: false }
+    // Keep the real row in the list: no cloned card, no empty placeholder.
+    row.style.position = 'relative'
+    row.style.zIndex = '3'
+    row.style.willChange = 'transform'
+    row.style.background = 'var(--card-bg, #fff)'
+    row.style.boxShadow = '0 8px 22px rgba(0,0,0,.10)'
+    row.style.borderRadius = '10px'
     const tick = () => {
-      const drag = dragRef.current
-      if (!drag) return
-      ghost.style.transform = `translate3d(0,${y - drag.startY}px,0) scale(1.02)`
-      const rows = Array.from(document.querySelectorAll<HTMLElement>('.category-manager [data-category-sort-id]'))
-      const target = rows.find(el => el.dataset.categorySortId !== id && y >= el.getBoundingClientRect().top && y < el.getBoundingClientRect().bottom)
-      const targetId = target?.dataset.categorySortId ?? ''
-      if (drag.moved && targetId && targetId !== lastTarget) {
-        const current = previewRef.current ?? ids
-        const from = current.indexOf(id), to = current.indexOf(targetId)
-        if (from >= 0 && to >= 0 && from !== to) {
-          const next = [...current]
-          next.splice(from, 1)
-          next.splice(to, 0, id)
-          setPreview(next)
+      if (!dragRef.current) return
+      const delta = currentY - startY
+      row.style.transform = `translate3d(0,${delta}px,0)`
+      if (moved) {
+        const midpoint = centers[startIndex] + delta
+        let next = 0
+        for (let i = 0; i < centers.length; i++) if (midpoint > centers[i]) next = i
+        if (next !== targetIndex) {
+          targetIndex = next
+          rows.forEach((el, index) => {
+            if (index === startIndex) return
+            const shift = startIndex < targetIndex && index > startIndex && index <= targetIndex ? -rowHeight
+              : startIndex > targetIndex && index >= targetIndex && index < startIndex ? rowHeight : 0
+            el.style.transition = 'transform 190ms cubic-bezier(.2,.8,.2,1)'
+            el.style.transform = shift ? `translate3d(0,${shift}px,0)` : ''
+          })
         }
-        lastTarget = targetId
-      }
-      if (drag.moved) {
-        const edge = 72
-        if (y < edge) window.scrollBy(0, -Math.min(12, (edge - y) / 5))
-        else if (y > window.innerHeight - edge) window.scrollBy(0, Math.min(12, (y - window.innerHeight + edge) / 5))
+        const edge = 65
+        if (currentY < edge) window.scrollBy(0, -Math.min(9, (edge - currentY) / 7))
+        else if (currentY > window.innerHeight - edge) window.scrollBy(0, Math.min(9, (currentY - window.innerHeight + edge) / 7))
       }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     const move = (e: PointerEvent) => {
-      if (e.pointerId !== event.pointerId || !dragRef.current) return
-      y = e.clientY
-      if (Math.abs(y - dragRef.current.startY) > 4) dragRef.current.moved = true
+      if (e.pointerId !== event.pointerId) return
+      currentY = e.clientY
+      if (Math.abs(currentY - startY) > 4) {
+        moved = true
+        if (dragRef.current) dragRef.current.moved = true
+      }
     }
     const cleanup = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', cancel)
       cancelAnimationFrame(raf)
-      ghost.remove()
+      rows.forEach(el => {
+        el.style.transform = ''
+        el.style.transition = ''
+      })
+      row.style.position = ''
+      row.style.zIndex = ''
+      row.style.willChange = ''
+      row.style.background = ''
+      row.style.boxShadow = ''
+      row.style.borderRadius = ''
     }
     const finish = (cancelled: boolean) => {
-      const drag = dragRef.current
-      if (!drag) return
-      cleanup()
+      if (!dragRef.current) return
       dragRef.current = null
-      setDraggingId(null)
-      const next = previewRef.current
-      if (!cancelled && drag.moved && next && next.join('|') !== ids.join('|')) {
+      cleanup()
+      if (!cancelled && moved && targetIndex !== startIndex) {
+        const next = [...ids]
+        next.splice(startIndex, 1)
+        next.splice(targetIndex, 0, id)
+        setPreview(next)
         void perform(() => reorderCategories(type, next), () => setPreview(null))
-      } else setPreview(null)
+      }
     }
     const up = (e: PointerEvent) => { if (e.pointerId === event.pointerId) finish(false) }
     const cancel = (e: PointerEvent) => { if (e.pointerId === event.pointerId) finish(true) }
@@ -125,7 +139,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
       <button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setEditingId(null);setError('')}}>支出分类</button>
       <button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setEditingId(null);setError('')}}>收入分类</button>
     </div>
-    <div className="manage-list">{shown.map(category => <div className={`manage-category ${draggingId === category.id ? "is-dragging" : ""}`} data-category-sort-id={category.id} key={category.id} style={{ opacity: draggingId === category.id ? 0.25 : 1, transition: "opacity 150ms ease" }}>
+    <div className="manage-list">{shown.map(category => <div className={`manage-category ${draggingId === category.id ? "is-dragging" : ""}`} data-category-sort-id={category.id} key={category.id}>
       {editingId === category.id ? <>
         <input aria-label="编辑分类名称" maxLength={20} value={editName} onChange={e => setEditName(e.target.value)}/>
         <IconPicker value={editIcon} onChange={setEditIcon}/>
