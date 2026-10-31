@@ -30,7 +30,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
     const startIndex = ids.indexOf(id)
     const startY = event.clientY
     const rowHeight = row.getBoundingClientRect().height + 4
-    const centers = rows.map(el => { const rect = el.getBoundingClientRect(); return rect.top + rect.height / 2 })
+    // The displaced rows follow the finger continuously, filling the original slot.\n    // Waiting for a full row crossing used to leave a conspicuous empty gap.
     let currentY = startY
     let targetIndex = startIndex
     let moved = false
@@ -49,19 +49,20 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
       const delta = currentY - startY
       row.style.transform = `translate3d(0,${delta}px,0)`
       if (moved) {
-        const midpoint = centers[startIndex] + delta
-        let next = 0
-        for (let i = 0; i < centers.length; i++) if (midpoint > centers[i]) next = i
-        if (next !== targetIndex) {
-          targetIndex = next
-          rows.forEach((el, index) => {
-            if (index === startIndex) return
-            const shift = startIndex < targetIndex && index > startIndex && index <= targetIndex ? -rowHeight
-              : startIndex > targetIndex && index >= targetIndex && index < startIndex ? rowHeight : 0
-            el.style.transition = 'transform 190ms cubic-bezier(.2,.8,.2,1)'
-            el.style.transform = shift ? `translate3d(0,${shift}px,0)` : ''
-          })
-        }
+        // Move neighbors proportionally from the first pixel, instead of only
+        // after crossing the next row's center (which exposed a blank slot).
+        const distance = Math.abs(delta)
+        const direction = Math.sign(delta)
+        targetIndex = Math.max(0, Math.min(rows.length - 1, startIndex + Math.round(delta / rowHeight)))
+        rows.forEach((el, index) => {
+          if (index === startIndex) return
+          const stepsAway = (index - startIndex) * direction
+          const shift = stepsAway > 0
+            ? -direction * Math.max(0, Math.min(rowHeight, distance - (stepsAway - 1) * rowHeight))
+            : 0
+          el.style.transition = 'none'
+          el.style.transform = shift ? `translate3d(0,${shift}px,0)` : ''
+        })
         const edge = 65
         if (currentY < edge) window.scrollBy(0, -Math.min(9, (edge - currentY) / 7))
         else if (currentY > window.innerHeight - edge) window.scrollBy(0, Math.min(9, (currentY - window.innerHeight + edge) / 7))
