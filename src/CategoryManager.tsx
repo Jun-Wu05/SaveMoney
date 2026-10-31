@@ -29,7 +29,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
     const ids = rows.map(el => el.dataset.categorySortId ?? '')
     const startIndex = ids.indexOf(id)
     const startY = event.clientY
-    const rowHeight = row.getBoundingClientRect().height
+    const rowHeight = row.getBoundingClientRect().height + 4
     const centers = rows.map(el => { const rect = el.getBoundingClientRect(); return rect.top + rect.height / 2 })
     let currentY = startY
     let targetIndex = startIndex
@@ -37,10 +37,11 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
     let raf = 0
     dragRef.current = { id, pointerId: event.pointerId, startY, moved: false }
     // Keep the real row in the list: no cloned card, no empty placeholder.
+    row.dataset.dragActive = 'true'
     row.style.position = 'relative'
     row.style.zIndex = '3'
     row.style.willChange = 'transform'
-    row.style.background = 'var(--card-bg, #fff)'
+    row.style.background = '#f4f8f2'
     row.style.boxShadow = '0 8px 22px rgba(0,0,0,.10)'
     row.style.borderRadius = '10px'
     const tick = () => {
@@ -88,6 +89,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
       row.style.position = ''
       row.style.zIndex = ''
       row.style.willChange = ''
+      delete row.dataset.dragActive
       row.style.background = ''
       row.style.boxShadow = ''
       row.style.borderRadius = ''
