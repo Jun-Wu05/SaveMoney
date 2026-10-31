@@ -22,31 +22,80 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
   useEffect(() => { previewRef.current = null; setOrderPreview(null) }, [categories, type])
   function setPreview(ids: string[] | null) { previewRef.current = ids; setOrderPreview(ids) }
   function onDragStart(event: React.PointerEvent<HTMLButtonElement>, id: string) {
-    if (busy || editingId) return
-    event.currentTarget.setPointerCapture(event.pointerId)
+    if (busy || editingId || dragRef.current) return
+    const row = event.currentTarget.closest<HTMLElement>('[data-category-sort-id]')
+    if (!row) return
+    const rect = row.getBoundingClientRect()
+    const ids = shown.map(c => c.id)
     dragRef.current = { id, pointerId: event.pointerId, startY: event.clientY, moved: false }
     setDraggingId(id)
-  }
-  function onDragMove(event: React.PointerEvent<HTMLButtonElement>) {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
-    if (Math.abs(event.clientY - drag.startY) > 5) drag.moved = true
-    if (!drag.moved) return
-    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-category-sort-id]')?.dataset.categorySortId
-    if (!target) return
-    const current = previewRef.current ?? shown.map(c => c.id)
-    const from = current.indexOf(drag.id), to = current.indexOf(target)
-    if (from < 0 || to < 0 || from === to) return
-    const next = [...current]; next.splice(from, 1); next.splice(to, 0, drag.id)
-    setPreview(next)
-  }
-  function onDragEnd(event: React.PointerEvent<HTMLButtonElement>) {
-    const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
-    dragRef.current = null; setDraggingId(null)
-    const ids = previewRef.current
-    if (ids && drag.moved) void perform(() => reorderCategories(type, ids), () => setPreview(null))
-    else setPreview(null)
+    const ghost = row.cloneNode(true) as HTMLElement
+    ghost.removeAttribute('data-category-sort-id')
+    Object.assign(ghost.style, {
+      position: 'fixed', left: rect.left + 'px', top: rect.top + 'px',
+      width: rect.width + 'px', height: rect.height + 'px', margin: '0',
+      zIndex: '9999', pointerEvents: 'none', transform: 'scale(1.02)',
+      boxShadow: '0 10px 28px rgba(0,0,0,.18)', background: '#fff',
+      borderRadius: '12px', willChange: 'transform'
+    })
+    document.body.appendChild(ghost)
+    let y = event.clientY
+    let raf = 0
+    let lastTarget = ''
+    const tick = () => {
+      const drag = dragRef.current
+      if (!drag) return
+      ghost.style.transform = `translate3d(0,${y - drag.startY}px,0) scale(1.02)`
+      const rows = Array.from(document.querySelectorAll<HTMLElement>('.category-manager [data-category-sort-id]'))
+      const target = rows.find(el => el.dataset.categorySortId !== id && y >= el.getBoundingClientRect().top && y < el.getBoundingClientRect().bottom)
+      const targetId = target?.dataset.categorySortId ?? ''
+      if (drag.moved && targetId && targetId !== lastTarget) {
+        const current = previewRef.current ?? ids
+        const from = current.indexOf(id), to = current.indexOf(targetId)
+        if (from >= 0 && to >= 0 && from !== to) {
+          const next = [...current]
+          next.splice(from, 1)
+          next.splice(to, 0, id)
+          setPreview(next)
+        }
+        lastTarget = targetId
+      }
+      if (drag.moved) {
+        const edge = 72
+        if (y < edge) window.scrollBy(0, -Math.min(12, (edge - y) / 5))
+        else if (y > window.innerHeight - edge) window.scrollBy(0, Math.min(12, (y - window.innerHeight + edge) / 5))
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    const move = (e: PointerEvent) => {
+      if (e.pointerId !== event.pointerId || !dragRef.current) return
+      y = e.clientY
+      if (Math.abs(y - dragRef.current.startY) > 4) dragRef.current.moved = true
+    }
+    const cleanup = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', cancel)
+      cancelAnimationFrame(raf)
+      ghost.remove()
+    }
+    const finish = (cancelled: boolean) => {
+      const drag = dragRef.current
+      if (!drag) return
+      cleanup()
+      dragRef.current = null
+      setDraggingId(null)
+      const next = previewRef.current
+      if (!cancelled && drag.moved && next && next.join('|') !== ids.join('|')) {
+        void perform(() => reorderCategories(type, next), () => setPreview(null))
+      } else setPreview(null)
+    }
+    const up = (e: PointerEvent) => { if (e.pointerId === event.pointerId) finish(false) }
+    const cancel = (e: PointerEvent) => { if (e.pointerId === event.pointerId) finish(true) }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', cancel)
   }
   function moveByKey(id: string, direction: number) {
     if (busy) return
@@ -76,7 +125,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
       <button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setEditingId(null);setError('')}}>支出分类</button>
       <button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setEditingId(null);setError('')}}>收入分类</button>
     </div>
-    <div className="manage-list">{shown.map(category => <div className={`manage-category ${draggingId === category.id ? "is-dragging" : ""}`} data-category-sort-id={category.id} key={category.id}>
+    <div className="manage-list">{shown.map(category => <div className={`manage-category ${draggingId === category.id ? "is-dragging" : ""}`} data-category-sort-id={category.id} key={category.id} style={{ opacity: draggingId === category.id ? 0.25 : 1, transition: "opacity 150ms ease" }}>
       {editingId === category.id ? <>
         <input aria-label="编辑分类名称" maxLength={20} value={editName} onChange={e => setEditName(e.target.value)}/>
         <IconPicker value={editIcon} onChange={setEditIcon}/>
@@ -89,7 +138,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
           if (window.confirm(`确定删除「${category.name}」？已有账单的分类无法删除。`))
             void perform(() => deleteUnusedCategory(category.id))
         }}>删除</button>
-        <button type="button" className="category-sort-handle" disabled={busy} aria-label={`调整${category.name}顺序，长按拖动或使用上下方向键`} title="按住拖动排序" onPointerDown={event => onDragStart(event, category.id)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={event => { if (dragRef.current?.pointerId === event.pointerId) { dragRef.current = null; setDraggingId(null); setPreview(null) } }} onKeyDown={event => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); moveByKey(category.id, event.key === 'ArrowUp' ? -1 : 1) } }}><Menu size={21}/></button>
+        <button type="button" className="category-sort-handle" disabled={busy} aria-label={`调整${category.name}顺序，长按拖动或使用上下方向键`} title="按住拖动排序" onPointerDown={event => onDragStart(event, category.id)} style={{ touchAction: "none", userSelect: "none", WebkitUserSelect: "none" }} onKeyDown={event => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); moveByKey(category.id, event.key === 'ArrowUp' ? -1 : 1) } }}><Menu size={21}/></button>
       </>}
     </div>)}</div>
     <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName,newIcon) },() => {setNewName('');setNewIcon('ellipsis')})}}>
