@@ -18,7 +18,6 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
   const [orderPreview, setOrderPreview] = useState<string[] | null>(null)
   const previewRef = useRef<string[] | null>(null)
   const dragRef = useRef<{ id: string; pointerId: number; startY: number; moved: boolean } | null>(null)
-  const [draggingId, setDraggingId] = useState<string | null>(null)
   useEffect(() => { previewRef.current = null; setOrderPreview(null) }, [categories, type])
   function setPreview(ids: string[] | null) { previewRef.current = ids; setOrderPreview(ids) }
   function onDragStart(event: React.PointerEvent<HTMLButtonElement>, id: string) {
