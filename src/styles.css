@@ -950,3 +950,12 @@
 }
 .lottery-budget-form>div{min-width:0;max-width:100%}
 .lottery-budget-form>div button{flex-shrink:0}
+
+/* Category ordering: an isolated touch handle, without global page gestures. */
+.category-manager .manage-category{min-width:0;transition:background-color .15s ease}
+.category-manager .manage-category.is-dragging{background:#e7efe6;border-radius:10px}
+.category-manager .manage-category .category-sort-handle{flex:0 0 34px;display:flex;align-items:center;justify-content:center;min-width:34px;min-height:44px;padding:7px 4px;border:0;background:transparent;color:#8c9b90;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.category-manager .manage-category .category-sort-handle:active{cursor:grabbing;color:#527d66}
+.category-manager .manage-category .category-sort-handle:focus-visible{outline:2px solid #527d66;outline-offset:2px}
+.category-manager .manage-category>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:360px){.category-manager .manage-category{gap:5px}.category-manager .manage-category button:not(.category-sort-handle){padding:9px 7px}}

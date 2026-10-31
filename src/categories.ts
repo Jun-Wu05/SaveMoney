@@ -57,3 +57,17 @@ export async function updateCategoryDetails(id: string, rawName: string, icon: s
     await db.categories.update(id, { name, icon })
   })
 }
+
+/** Persist one type's visible order atomically; transaction entries remain untouched. */
+export async function reorderCategories(type: TransactionType, orderedIds: string[]): Promise<void> {
+  await db.transaction('rw', db.categories, async () => {
+    const rows = await db.categories.where('type').equals(type).toArray()
+    if (rows.length !== orderedIds.length || new Set(orderedIds).size !== rows.length ||
+        orderedIds.some(id => !rows.some(row => row.id === id))) {
+      throw new Error('分类已发生变化，请重新排序')
+    }
+    await db.categories.bulkPut(rows.map(row => ({
+      ...row, sortOrder: orderedIds.indexOf(row.id) + 1,
+    })))
+  })
+}
