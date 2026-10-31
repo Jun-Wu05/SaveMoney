@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { type Category, type TransactionType } from './db'
 import { addCategory, updateCategoryDetails, deleteUnusedCategory, reorderCategories } from './categories'
 import { IconPicker } from './categoryIcons'
-import { GripVertical } from 'lucide-react'
+import { Menu } from 'lucide-react'
 
 export function CategoryManager({ categories, initialType = 'expense' }: { categories: Category[]; initialType?: TransactionType }) {
   const [type, setType] = useState<TransactionType>(initialType)
@@ -89,7 +89,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
           if (window.confirm(`确定删除「${category.name}」？已有账单的分类无法删除。`))
             void perform(() => deleteUnusedCategory(category.id))
         }}>删除</button>
-        <button type="button" className="category-sort-handle" disabled={busy} aria-label={`调整${category.name}顺序，长按拖动或使用上下方向键`} title="按住拖动排序" onPointerDown={event => onDragStart(event, category.id)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={event => { if (dragRef.current?.pointerId === event.pointerId) { dragRef.current = null; setDraggingId(null); setPreview(null) } }} onKeyDown={event => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); moveByKey(category.id, event.key === 'ArrowUp' ? -1 : 1) } }}><GripVertical size={21}/></button>
+        <button type="button" className="category-sort-handle" disabled={busy} aria-label={`调整${category.name}顺序，长按拖动或使用上下方向键`} title="按住拖动排序" onPointerDown={event => onDragStart(event, category.id)} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={event => { if (dragRef.current?.pointerId === event.pointerId) { dragRef.current = null; setDraggingId(null); setPreview(null) } }} onKeyDown={event => { if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); moveByKey(category.id, event.key === 'ArrowUp' ? -1 : 1) } }}><Menu size={21}/></button>
       </>}
     </div>)}</div>
     <form className="manage-add" onSubmit={e => {e.preventDefault(); void perform(async () => { await addCategory(type,newName,newIcon) },() => {setNewName('');setNewIcon('ellipsis')})}}>
