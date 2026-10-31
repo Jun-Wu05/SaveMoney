@@ -959,3 +959,11 @@
 .category-manager .manage-category .category-sort-handle:focus-visible{outline:2px solid #527d66;outline-offset:2px}
 .category-manager .manage-category>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:360px){.category-manager .manage-category{gap:5px}.category-manager .manage-category button:not(.category-sort-handle){padding:9px 7px}}
+
+/* Full-width category rows: the entire item, including its leading edge, moves together. */
+.category-manager .manage-list{padding:4px 2px;overflow:visible}
+.category-manager .manage-category{box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid #e8eee7;border-radius:11px;background:#fff;min-height:56px;margin:0;transform:translateZ(0);backface-visibility:hidden}
+.category-manager .manage-category + .manage-category{margin-top:4px}
+.category-manager .manage-category[data-drag-active="true"]{background:#f4f8f2;box-shadow:0 9px 22px rgba(39,78,56,.15);border-color:#adc9b7}
+.category-manager .category-sort-handle{touch-action:none;cursor:grab;flex-shrink:0}
+.category-manager .manage-category[data-drag-active="true"] .category-sort-handle{cursor:grabbing}
