@@ -138,7 +138,7 @@ export function CategoryManager({ categories, initialType = 'expense' }: { categ
       <button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => {setType('expense');setEditingId(null);setError('')}}>支出分类</button>
       <button type="button" className={type === 'income' ? 'active' : ''} onClick={() => {setType('income');setEditingId(null);setError('')}}>收入分类</button>
     </div>
-    <div className="manage-list">{shown.map(category => <div className={`manage-category ${draggingId === category.id ? "is-dragging" : ""}`} data-category-sort-id={category.id} key={category.id}>
+    <div className="manage-list">{shown.map(category => <div className="manage-category" data-category-sort-id={category.id} key={category.id}>
       {editingId === category.id ? <>
         <input aria-label="编辑分类名称" maxLength={20} value={editName} onChange={e => setEditName(e.target.value)}/>
         <IconPicker value={editIcon} onChange={setEditIcon}/>
