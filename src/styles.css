@@ -997,3 +997,23 @@
 .range-trend-ends{display:flex;justify-content:space-between;color:#879087;font-size:11px;margin-top:9px}
 .range-rank-row{display:flex;align-items:center;gap:11px;padding:16px 13px;border-bottom:1px solid #edf0eb}
 .range-rank-row:last-child{border-bottom:0}
+
+
+/* iPhone-style three-column calendar wheel: no native date input/calendar popover. */
+.stats-wheel-date-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #e4e9e2;padding:12px 0;font-size:13px;color:#35483b}
+.stats-wheel-date-row button{border:1px solid #dfe7df;border-radius:12px;background:#fff;padding:12px 11px;display:flex;align-items:center;gap:6px;color:#415c49;font-size:15px;font-variant-numeric:tabular-nums}
+.date-wheel-backdrop{position:fixed;inset:0;z-index:100;background:#15231855;display:flex;justify-content:center;align-items:flex-end}
+.date-wheel-sheet{width:min(500px,100%);background:#fbfbf9;border-radius:22px 22px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom));box-shadow:0 -12px 40px #172d1c20}
+.date-wheel-toolbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border-bottom:1px solid #e9ebe7}
+.date-wheel-toolbar strong{font-size:15px;color:#2e3c31}
+.date-wheel-toolbar button{border:0;background:transparent;padding:10px 5px;color:#527d66;font-size:15px}
+.date-wheel-toolbar button:last-child{font-weight:700}
+.date-wheel-picker{position:relative;height:220px;display:flex;justify-content:center;gap:4px;padding:0 18px;overflow:hidden}
+.date-wheel-selection{position:absolute;z-index:0;left:18px;right:18px;height:44px;top:88px;background:#edf0ed;border-radius:12px;pointer-events:none}
+.date-wheel-col{position:relative;z-index:1;min-width:0;flex:1}
+.date-wheel-scroll{height:220px;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;touch-action:pan-y}
+.date-wheel-scroll::-webkit-scrollbar{display:none}
+.date-wheel-spacer{height:88px;flex:none}
+.date-wheel-item{scroll-snap-align:center;width:100%;height:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#a1a9a2;font-size:19px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.date-wheel-item.active{color:#263a2b;font-weight:650;font-size:21px}
+.date-wheel-caption{text-align:center;color:#88938b;font-size:11px;padding-top:8px}
