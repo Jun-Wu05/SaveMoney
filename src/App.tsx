@@ -25,6 +25,8 @@ import { CategoryManager } from './CategoryManager'
 import { LotteryPage } from './LotteryPage'
 import { LOTTERY_EXPENSE_ID, LOTTERY_INCOME_ID, ensureLotteryCategories, lotteryTotals, effectiveLotteryBudget } from './lottery'
 import { checkPwaUpdate } from './pwaUpdateCheck'
+import { RangeStats } from './RangeStats'
+import { isoLocal, offsetDays, validRange, type DateRange } from './dateRangeStats'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
 const nav = [
@@ -141,6 +143,10 @@ export default function App() {
   const [ledgerCategories, setLedgerCategories] = useState<string[]>([])
   const [ledgerFiltersOpen, setLedgerFiltersOpen] = useState(false)
   const [month, setMonth] = useState(() => monthString(new Date()))
+  const [statsRange, setStatsRange] = useState<DateRange | null>(null)
+  const [statsDateMenu, setStatsDateMenu] = useState(false)
+  const [customDateOpen, setCustomDateOpen] = useState(false)
+  const [draftRange, setDraftRange] = useState<DateRange>({start:isoLocal(offsetDays(new Date(),-29)),end:isoLocal(new Date())})
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
   const [copyTemplate, setCopyTemplate] = useState<Entry | null>(null)
@@ -199,6 +205,19 @@ export default function App() {
   const ledgerHasFilters = Boolean(searchTerm.trim() || drilldownIds || filterTypes.length !== 2 || allMonths || ledgerDate || ledgerCategories.length>0)
   const clearLedgerFilters = () => { setSearchTerm(''); setDrilldownIds(null); setFilterTypes(['expense','income']); setAllMonths(false); setLedgerDate(''); setLedgerCategories([]); setCalendarDate(null) }
   const recent = monthEntries.slice(0, 5)
+  const selectStatsRange = (preset: 'month'|'previous'|'7days'|'30days'|'3months'|'year') => {
+    setStatsDateMenu(false)
+    if (preset === 'month') { setStatsRange(null); return }
+    const today = new Date()
+    const end = isoLocal(today)
+    const start = preset === 'previous' ? `${adjustMonth(month,-1)}-01`
+      : preset === '7days' ? isoLocal(offsetDays(today,-6))
+      : preset === '30days' ? isoLocal(offsetDays(today,-29))
+      : preset === '3months' ? isoLocal(new Date(today.getFullYear(),today.getMonth()-3,today.getDate()+1))
+      : `${today.getFullYear()}-01-01`
+    const finalEnd = preset === 'previous' ? isoLocal(new Date(Number(month.slice(0,4)),Number(month.slice(5))-1,0)) : end
+    setStatsRange({start,end:finalEnd})
+  }
   const openEditor = (entry: Entry | 'new', date?: string) => { setCopyTemplate(null); setNewEntryDate(date); setEditing(entry) }
   const duplicateEntry = (entry: Entry) => { setCopyTemplate(entry); setNewEntryDate(undefined); setEditing('new') }
   const closeEditor = () => { setEditing(null); setNewEntryDate(undefined); setCopyTemplate(null); setLotteryPreset(null) }
@@ -426,7 +445,13 @@ export default function App() {
 
       </div>}
       {!budgetOpen && tab === 'stats' && <div key="motion-stats" className="motion-page">
-        <div className="stats-v2-heading"><h2>消费分析</h2><span>${monthLabel(month)}</span></div>
+        <div className="stats-v2-heading"><h2>消费分析</h2><button className="stats-range-trigger" type="button" aria-expanded={statsDateMenu} onClick={()=>setStatsDateMenu(!statsDateMenu)}>{statsRange ? `${statsRange.start.slice(5).replace('-', '/')} – ${statsRange.end.slice(5).replace('-', '/')}` : '本月'} <ChevronRight size={15}/></button></div>
+        {statsDateMenu && <div className="stats-date-menu" role="group" aria-label="选择统计日期">
+          {([['month','本月'],['previous','上月'],['7days','最近 7 天'],['30days','最近 30 天'],['3months','最近 3 个月'],['year','今年']] as const).map(([key,label])=><button type="button" key={key} onClick={()=>selectStatsRange(key)}>{label}</button>)}
+          <button type="button" className="stats-date-custom" onClick={()=>{setStatsDateMenu(false);setDraftRange(statsRange??{start:`${month}-01`,end:isoLocal(new Date(Number(month.slice(0,4)),Number(month.slice(5)),0))});setCustomDateOpen(true)}}>自定义日期 <ChevronRight size={15}/></button>
+        </div>}
+        {statsRange && <div className="stats-range-notice"><CalendarDays size={17}/><span>{statsRange.start} 至 {statsRange.end}</span><button type="button" onClick={()=>setStatsRange(null)}>返回月统计</button></div>}
+        {statsRange ? <RangeStats entries={entries??[]} categories={categoryList} range={statsRange}/> : <>
         <section className="stats-v2-overview">
           <div className="stats-v2-total"><small>本月总支出</small><strong>¥{money(expenses)}</strong><span>本月收入 ¥{money(income)} · 结余 ¥{money(income-expenses)}</span></div>
           <div className="stats-v2-metrics">
@@ -440,6 +465,7 @@ export default function App() {
         <div className="stats-v2-compare">本期 ¥{money(dailySummary.totalMinor)} <span>上期 ¥{money(dailySummary.previousMinor)}</span></div>
         <div className="section-heading"><h2>分类消费排行</h2><span className="meta">点击分类查看账单</span></div>
         {byCategory.length ? <div className="stats-v2-ranking motion-ranking">{byCategory.map((item,index)=><button type="button" key={item.id} onClick={()=>openCategoryBills([item.id])}><span className="stats-v2-rank">{index+1}</span><span className="stats-v2-rank-main"><span className="stats-v2-rank-title"><strong>{categoryName(categoryList,item.id)}</strong><b>¥{money(item.amount)}</b></span><span className="stats-v2-track"><i style={{width:`${expenses>0?item.amount/expenses*100:0}%`}}/></span></span><span className="stats-v2-share">{expenses>0?(item.amount/expenses*100).toFixed(1):'0.0'}%</span><ChevronRight size={14}/></button>)}</div> : <div className="empty"><BarChart3 size={26}/><strong>暂无支出数据</strong><span>记账后即可查看分类排行</span></div>}
+        </>}
         <div className="section-heading"><h2>近 6 个月支出趋势</h2><span className="meta">截至所选月份</span></div>
         <MemoSpendingTrend points={trend} />
         <div className="section-heading"><h2>月度回顾</h2><span className="meta">{monthLabel(month)}</span></div>
@@ -450,6 +476,15 @@ export default function App() {
         </section>
         <div className="section-heading"><h2>消费洞察</h2><span className="meta">本地分析 · 无 AI 费用</span></div>
         <div className="insight-card">{insights.map((message, index) => <p key={index}>{message}</p>)}</div>
+      </div>}
+      {customDateOpen && <div className="stats-date-modal-backdrop" role="presentation" onClick={()=>setCustomDateOpen(false)}>
+        <div className="stats-date-modal" role="dialog" aria-modal="true" aria-label="自定义统计日期" onClick={event=>event.stopPropagation()}>
+          <h3>自定义统计日期</h3><p>支持跨月、跨年，包含开始与结束当天</p>
+          <label>开始日期<input type="date" value={draftRange.start} onChange={event=>setDraftRange({...draftRange,start:event.target.value})}/></label>
+          <label>结束日期<input type="date" value={draftRange.end} onChange={event=>setDraftRange({...draftRange,end:event.target.value})}/></label>
+          {!validRange(draftRange) && <p className="stats-date-error" role="alert">结束日期不能早于开始日期，请检查日期。</p>}
+          <div className="stats-date-actions"><button type="button" onClick={()=>setCustomDateOpen(false)}>取消</button><button type="button" disabled={!validRange(draftRange)} onClick={()=>{setStatsRange({...draftRange});setCustomDateOpen(false)}}>查看统计</button></div>
+        </div>
       </div>}
       {!budgetOpen && tab === 'settings' && <div key="motion-settings" className="motion-page">
         {settingsPage === 'root' ? <>
