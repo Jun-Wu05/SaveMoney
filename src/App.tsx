@@ -26,6 +26,7 @@ import { LotteryPage } from './LotteryPage'
 import { LOTTERY_EXPENSE_ID, LOTTERY_INCOME_ID, ensureLotteryCategories, lotteryTotals, effectiveLotteryBudget } from './lottery'
 import { checkPwaUpdate } from './pwaUpdateCheck'
 import { RangeStats } from './RangeStats'
+import { DateWheelPicker } from './DateWheelPicker'
 import { isoLocal, offsetDays, validRange, type DateRange } from './dateRangeStats'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -146,6 +147,7 @@ export default function App() {
   const [statsRange, setStatsRange] = useState<DateRange | null>(null)
   const [statsDateMenu, setStatsDateMenu] = useState(false)
   const [customDateOpen, setCustomDateOpen] = useState(false)
+  const [wheelField, setWheelField] = useState<'start'|'end'|null>(null)
   const [draftRange, setDraftRange] = useState<DateRange>({start:isoLocal(offsetDays(new Date(),-29)),end:isoLocal(new Date())})
   const [editing, setEditing] = useState<Entry | null | 'new'>(null)
   const [newEntryDate, setNewEntryDate] = useState<string | undefined>()
@@ -480,12 +482,13 @@ export default function App() {
       {customDateOpen && <div className="stats-date-modal-backdrop" role="presentation" onClick={()=>setCustomDateOpen(false)}>
         <div className="stats-date-modal" role="dialog" aria-modal="true" aria-label="自定义统计日期" onClick={event=>event.stopPropagation()}>
           <h3>自定义统计日期</h3><p>支持跨月、跨年，包含开始与结束当天</p>
-          <label>开始日期<input type="date" value={draftRange.start} onChange={event=>setDraftRange({...draftRange,start:event.target.value})}/></label>
-          <label>结束日期<input type="date" value={draftRange.end} onChange={event=>setDraftRange({...draftRange,end:event.target.value})}/></label>
+          <div className="stats-wheel-date-row"><span>开始日期</span><button type="button" onClick={()=>setWheelField('start')}>{draftRange.start.replaceAll('-', '/')} <ChevronRight size={16}/></button></div>
+          <div className="stats-wheel-date-row"><span>结束日期</span><button type="button" onClick={()=>setWheelField('end')}>{draftRange.end.replaceAll('-', '/')} <ChevronRight size={16}/></button></div>
           {!validRange(draftRange) && <p className="stats-date-error" role="alert">结束日期不能早于开始日期，请检查日期。</p>}
           <div className="stats-date-actions"><button type="button" onClick={()=>setCustomDateOpen(false)}>取消</button><button type="button" disabled={!validRange(draftRange)} onClick={()=>{setStatsRange({...draftRange});setCustomDateOpen(false)}}>查看统计</button></div>
         </div>
       </div>}
+      {wheelField && <DateWheelPicker key={wheelField} value={draftRange[wheelField]} onCancel={()=>setWheelField(null)} onConfirm={date=>{setDraftRange(previous=>({...previous,[wheelField]:date}));setWheelField(null)}}/>}
       {!budgetOpen && tab === 'settings' && <div key="motion-settings" className="motion-page">
         {settingsPage === 'root' ? <>
           <div className="settings-v2-heading"><h2>设置</h2><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div>
