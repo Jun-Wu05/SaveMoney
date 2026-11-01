@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { DateRange } from './dateRangeStats'
 import { validDate } from './dateRangeStats'
 
-type Part = 'year' | 'month' | 'day'
 const ITEM_HEIGHT = 44
 const pad = (n: number) => String(n).padStart(2, '0')
 const format = (value: string) => `${value.slice(0,4)}年${Number(value.slice(5,7))}月${Number(value.slice(8,10))}日`
@@ -16,7 +14,7 @@ function WheelColumn({items, selected, suffix, onChange}: {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     const index = Math.max(0, items.indexOf(selected))
-    ref.current?.scrollTo({top:index * ITEM_HEIGHT,behavior:'instant'})
+    ref.current?.scrollTo({top:index * ITEM_HEIGHT,behavior:'auto'})
   }, [items.length, selected])
   useEffect(() => () => { if(timer.current) clearTimeout(timer.current) }, [])
   const settle = () => {
