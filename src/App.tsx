@@ -523,10 +523,9 @@ export default function App() {
       <div className="setting-card"><h3>备份与导出</h3><p>完整 JSON 可以恢复所有账目与分类；Excel 按月份分 Sheet 并包含汇总，CSV 包含全量账单及总计；仅 JSON 可完整恢复。</p>
         <div className="action-grid">
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
-          <button disabled={backupBusy} onClick={() => exportData('xlsx')}>导出 Excel（月度分表）</button>
-          <button disabled={backupBusy} onClick={() => exportData('csv')}>导出 CSV 账单</button>
+
         </div>
-      </div>
+      </div>\n       <ExportBillsPanel />
       <div className="setting-card"><h3>导入 CSV / Excel 账单</h3><p>支持 SaveMoney 导出的 CSV 或 Excel 月度账单。只追加新账单，不覆盖现有账本；相同日期、类型、金额、分类和备注的记录视为重复。</p>
         <label className="file-label">选择 CSV / Excel 文件<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={backupBusy} onChange={e=>{void chooseCsv(e.target.files?.[0]);e.target.value=''}} /></label>
         {pendingCsv && <div className="restore-preview">
