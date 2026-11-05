@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { db, type Entry, type Category } from './db'
 import { buildMonthlySheets, safeSpreadsheetText, type MonthlySheet } from './excelExport'
+import { DateWheelPicker } from './DateWheelPicker'
 
 type Preset = 'month' | 'previous' | 'year' | 'all' | 'custom'
 type Format = 'xlsx' | 'csv'
@@ -129,6 +130,7 @@ export function ExportBillsPanel() {
   const [preset,setPreset] = useState<Preset>('month')
   const [customFrom,setCustomFrom] = useState(iso(first(new Date())))
   const [customTo,setCustomTo] = useState(iso(new Date()))
+  const [wheelField,setWheelField] = useState<'start' | 'end' | null>(null)
   const [expense,setExpense] = useState(true)
   const [income,setIncome] = useState(true)
   const [format,setFormat] = useState<Format>('xlsx')
@@ -172,9 +174,10 @@ export function ExportBillsPanel() {
       <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
         {chip('month','本月')}{chip('previous','上个月')}{chip('year','今年')}{chip('all','全部')}{chip('custom','自定义')}
       </div>
-      {preset==='custom'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:12}}>
-        <label style={{fontSize:13}}>开始日期<input aria-label="开始日期" style={{width:'100%',marginTop:5}} type="date" value={customFrom} onChange={e=>setCustomFrom(e.target.value)}/></label>
-        <label style={{fontSize:13}}>结束日期<input aria-label="结束日期" style={{width:'100%',marginTop:5}} type="date" value={customTo} onChange={e=>setCustomTo(e.target.value)}/></label>
+      {preset==='custom'&&<div style={{marginTop:12}}>
+        <div className="stats-wheel-date-row"><span>开始日期</span><button type="button" onClick={()=>setWheelField('start')}>{customFrom.replaceAll('-', '/')} ›</button></div>
+        <div className="stats-wheel-date-row"><span>结束日期</span><button type="button" onClick={()=>setWheelField('end')}>{customTo.replaceAll('-', '/')} ›</button></div>
+        {customFrom>customTo&&<p className="stats-date-error" role="alert">结束日期不能早于开始日期，请检查日期。</p>}
       </div>}
       <p style={{fontSize:12,margin:'10px 0'}}>{preset==='all'?'覆盖全部有记录的日期':`导出范围：${options.from} 至 ${options.to}`}</p>
       <h4 style={{margin:'14px 0 6px'}}>账单类型</h4>
@@ -191,6 +194,7 @@ export function ExportBillsPanel() {
         <button type="button" disabled={busy} onClick={()=>setOpen(false)}>收起</button>
       </div>
     </>}
+    {wheelField&&<DateWheelPicker key={wheelField} value={wheelField==='start'?customFrom:customTo} onCancel={()=>setWheelField(null)} onConfirm={date=>{if(wheelField==='start')setCustomFrom(date);else setCustomTo(date);setWheelField(null)}}/>}
     {status&&<p role="status" className="feedback">{status}</p>}
   </div>
 }
