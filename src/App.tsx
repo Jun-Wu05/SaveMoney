@@ -525,7 +525,8 @@ export default function App() {
           <button disabled={backupBusy} onClick={() => exportData('json')}>导出完整备份</button>
 
         </div>
-      </div>\n       <ExportBillsPanel />
+      </div>
+       <ExportBillsPanel />
       <div className="setting-card"><h3>导入 CSV / Excel 账单</h3><p>支持 SaveMoney 导出的 CSV 或 Excel 月度账单。只追加新账单，不覆盖现有账本；相同日期、类型、金额、分类和备注的记录视为重复。</p>
         <label className="file-label">选择 CSV / Excel 文件<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={backupBusy} onChange={e=>{void chooseCsv(e.target.files?.[0]);e.target.value=''}} /></label>
         {pendingCsv && <div className="restore-preview">
