@@ -7,7 +7,6 @@ type Format = 'xlsx' | 'csv'
 type Options = { from: string; to: string; expenses: boolean; incomes: boolean; notes: boolean; summary: boolean; aiPrompt: boolean }
 const pad = (v: number) => String(v).padStart(2, '0')
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
-const ym = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}`
 const first = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1)
 const last = (d: Date) => new Date(d.getFullYear(), d.getMonth()+1, 0)
 
