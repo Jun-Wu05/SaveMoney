@@ -1018,4 +1018,4 @@
 .date-wheel-item.active{color:#263a2b;font-weight:650;font-size:21px}
 .date-wheel-caption{text-align:center;color:#88938b;font-size:11px;padding-top:8px}
 
-.goods-settings-actions{display:flex;align-items:center;gap:6px}.goods-settings-actions button{min-width:38px}.goods-settings-action-label{font-size:12px;font-weight:650;color:#b66d54;background:#f5e9e1;border:1px solid #ecd5c7;border-radius:9px;padding:8px 10px;white-space:nowrap}
+.goods-settings-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:none}.settings-v2-heading .goods-settings-actions button{display:grid;place-items:center;flex:0 0 40px;width:40px;min-width:40px;max-width:40px;height:40px;padding:0;border:0;border-radius:50%;background:#fff;overflow:hidden}.settings-v2-heading .goods-settings-actions .goods-settings-icon{color:#b66d54;background:#f7ede7}.goods-settings-actions svg{display:block;flex:none}
