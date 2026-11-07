@@ -185,7 +185,7 @@ export async function downloadCsv() {
 export async function restoreBackup(backup: BackupData): Promise<void> {
   // 再次校验，以防传入的对象在预览后被修改。
   const safe = validateBackupText(JSON.stringify(backup))
-  await db.transaction('rw', db.entries, db.categories, db.budgets, db.categoryBudgets, db.goods, db.goodCategories, async () => {
+  await db.transaction('rw', [db.entries, db.categories, db.budgets, db.categoryBudgets, db.goods, db.goodCategories], async () => {
     await db.entries.clear()
     await db.categories.clear()
     await db.budgets.clear()
