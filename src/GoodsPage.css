@@ -102,3 +102,7 @@
 
 /* Separate consumption shortcut from the search controls on narrow iPhone PWA screens. */
 .goods-search-bar + .goods-category-use{margin-top:14px;margin-bottom:18px;flex-shrink:0}
+
+/* Repeat-purchase dates use the shared wheel picker, never native iOS calendar. */
+.goods-purchase-date-trigger{display:flex;align-items:center;justify-content:flex-end;gap:7px;border:0;background:transparent;color:var(--goods-ink);font-size:16px;min-height:42px;padding:7px 3px}
+.goods-screen .date-wheel-backdrop{z-index:120}
