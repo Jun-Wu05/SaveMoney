@@ -39,7 +39,7 @@ export function goodsCategoryPath(id:string, categories:GoodCategory[]):string[]
  const result:string[]=[],visited=new Set<string>()
  let current:string|null=id
  while(current && lookup.has(current) && !visited.has(current)) {
-  visited.add(current);const cat=lookup.get(current)!
+  visited.add(current);const cat:GoodCategory=lookup.get(current)!
   result.unshift(cat.name);current=cat.parentId
  }
  return result
