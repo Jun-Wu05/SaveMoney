@@ -21,6 +21,22 @@ export interface Category {
   sortOrder: number
 }
 
+export interface GoodCategory { id: string; name: string; parentId: string | null; sortOrder: number }
+export interface Good {
+  id: string
+  name: string
+  categoryId: string
+  brand: string
+  date: string
+  priceMinor: number | null
+  highlights: string
+  review: string
+  rating: 'recommend' | 'normal' | 'avoid'
+  image: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Budget { month: string; amountMinor: number }
 export interface CategoryBudget { id: string; month: string; categoryId: string; amountMinor: number }
 
@@ -29,6 +45,8 @@ class LedgerDb extends Dexie {
   categories!: EntityTable<Category, 'id'>
   budgets!: EntityTable<Budget, 'month'>
   categoryBudgets!: EntityTable<CategoryBudget, 'id'>
+  goodCategories!: EntityTable<GoodCategory, 'id'>
+  goods!: EntityTable<Good, 'id'>
 
   constructor() {
     super('SaveMoneyLedger')
@@ -46,6 +64,14 @@ class LedgerDb extends Dexie {
       categories: 'id, type, sortOrder',
       budgets: 'month',
       categoryBudgets: 'id, month, categoryId',
+    })
+    this.version(4).stores({
+      entries: 'id, date, type, categoryId',
+      categories: 'id, type, sortOrder',
+      budgets: 'month',
+      categoryBudgets: 'id, month, categoryId',
+      goodCategories: 'id, parentId, sortOrder',
+      goods: 'id, categoryId, date, rating',
     })
   }
 }
