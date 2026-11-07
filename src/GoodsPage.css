@@ -91,3 +91,11 @@
 .goods-export-option>svg{flex:none;color:#b3aaa2}
 .goods-export-note{font-size:12px;line-height:1.85;color:#93877d;margin:24px 2px}
 .goods-export-feedback{background:#f4eae3;border-radius:11px;padding:13px 14px;color:#8b4e35;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+
+/* Repeat-purchase modal: preserve the existing warm-paper theme and 16px PWA inputs. */
+.goods-purchase-overlay{position:fixed;inset:0;z-index:100;background:#23211f88;display:flex;align-items:flex-end;justify-content:center}
+.goods-purchase-dialog{width:min(100%,500px);max-height:90dvh;overflow:auto;background:var(--goods-bg);border-radius:20px 20px 0 0;padding:22px 20px max(24px,env(safe-area-inset-bottom));box-shadow:0 -8px 40px #23211f24}
+.goods-purchase-dialog h3{font-size:17px;margin:0 0 18px}
+.goods-purchase-dialog label{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--goods-line);font-size:14px}
+.goods-purchase-dialog input,.goods-form select{min-width:0;width:58%;font-size:16px!important;padding:9px;border:1px solid var(--goods-line);border-radius:9px;background:white;color:var(--goods-ink)}
+.goods-purchase-dialog .goods-category-form-actions button:last-child{background:var(--goods-accent);color:#fff}
