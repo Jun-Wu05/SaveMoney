@@ -13,13 +13,16 @@ const initial: Array<[string,string|null]> = [
 ]
 async function ensureGoodsCategories() {
   await db.transaction('rw', db.goodCategories, async () => {
-    if (await db.goodCategories.count()) return
+    const count=await db.goodCategories.count()
+    if(count){localStorage.setItem('savemoney-goods-categories-initialized','1');return}
+    if(localStorage.getItem('savemoney-goods-categories-initialized')==='1')return
     const ids = new Map<string,string>()
     const values: GoodCategory[] = initial.map(([name,parent],i) => {
       const id = crypto.randomUUID(); ids.set(name,id)
       return { id, name, parentId: parent ? ids.get(parent)! : null, sortOrder: i }
     })
     await db.goodCategories.bulkAdd(values)
+    localStorage.setItem('savemoney-goods-categories-initialized','1')
   })
 }
 const dateNow = () => { const d=new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-') }
@@ -56,6 +59,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const [error,setError]=useState('')
  const [dateOpen,setDateOpen]=useState(false)
  const [managePath,setManagePath]=useState<string[]>([])
+ const [choosePath,setChoosePath]=useState<string[]>([])
  const [categoryForm,setCategoryForm]=useState(false)
  const [categoryName,setCategoryName]=useState('')
  const [editingCategory,setEditingCategory]=useState<string|null>(null)
@@ -76,7 +80,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  },[all,cats,query,filter,active])
  const goBack=()=>{
   setError('')
-  if(mode==='choose'){setMode('edit');return}
+  if(mode==='choose'){if(choosePath.length){setChoosePath(old=>old.slice(0,-1));return}setMode('edit');return}
   if(mode==='manage'){
     if(categoryForm){setCategoryForm(false);setEditingCategory(null);setCategoryName('');return}
     if(managePath.length){setManagePath(old=>old.slice(0,-1));setActionCategory(null);return}
@@ -129,7 +133,9 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
   })
   setActionCategory(null)
  }
- const headerTitle=mode==='edit'?'添加 / 编辑好物':mode==='detail'?'好物详情':mode==='manage'?(manageParent?cats.find(c=>c.id===manageParent)?.name??'分类管理':'分类管理'):mode==='choose'?'选择分类':activeCategory?.name??'我的好物'
+ const chooseParent=choosePath.at(-1)??null
+ const chooseChildren=cats.filter(c=>c.parentId===chooseParent)
+ const headerTitle=mode==='edit'?'添加 / 编辑好物':mode==='detail'?'好物详情':mode==='manage'?(manageParent?cats.find(c=>c.id===manageParent)?.name??'分类管理':'分类管理'):mode==='choose'?(chooseParent?cats.find(c=>c.id===chooseParent)?.name??'选择分类':'选择分类'):activeCategory?.name??'我的好物'
  return <div className="goods-screen"><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<button aria-label="添加好物" onClick={()=>edit()}><Plus size={23}/></button>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
  {error&&<p className="goods-error" role="alert">{error}</p>}
  {mode==='browse'&&<div className="goods-body">
@@ -142,10 +148,15 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  </div>}
  {mode==='detail'&&current&&<div className="goods-body goods-detail">{current.image?<img className="goods-hero-img" src={current.image} alt={current.name}/>:<div className="goods-hero-placeholder"><ImagePlus/>暂无图片</div>}<div className="goods-detail-name"><h2>{current.name}</h2>{current.rating==='recommend'&&<span className="goods-badge">★ 推荐</span>}{current.rating==='avoid'&&<span className="goods-badge neutral">不推荐</span>}</div><div className="goods-price">{moneyLabel(current.priceMinor)}</div><div className="goods-list">{[['分类',pathFor(current.categoryId,cats)],['品牌 / 店铺',current.brand],['购买日期',current.date],['购买价格',moneyLabel(current.priceMinor)]].filter(([,v])=>Boolean(v)).map(([k,v])=><div className="goods-info-row" key={k}><span>{k}</span><strong>{v}</strong></div>)}</div>{current.highlights&&<section className="goods-note"><h3>商品要点</h3><p>{current.highlights}</p></section>}{current.review&&<section className="goods-note"><h3>使用评价</h3><p>{current.review}</p></section>}<button className="goods-delete" onClick={()=>void erase()}><Trash2 size={16}/> 删除好物</button></div>}
  {mode==='edit'&&draft&&<div className="goods-body goods-form"><label className="goods-photo-input">{draft.image?<img src={draft.image} alt="商品照片"/>:<><ImagePlus size={27}/><span>添加照片</span></>}<input type="file" accept="image/*" onChange={(e:ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(f)void loadPhoto(f).then(v=>setDraft(d=>d?{...d,image:v}:d)).catch(err=>setError(err.message));e.currentTarget.value=''}}/></label>{draft.image&&<button className="goods-remove-photo" onClick={()=>setDraft({...draft,image:''})}>移除照片</button>}
- <div className="goods-list goods-fields"><label>商品名称 <input placeholder="请输入商品名称" value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})}/></label><button onClick={()=>setMode('choose')}>分类 <strong>{pathFor(draft.categoryId,cats)||'请选择分类'}</strong><ChevronRight size={17}/></button><label>品牌 / 店铺<input placeholder="选填" value={draft.brand} onChange={e=>setDraft({...draft,brand:e.target.value})}/></label><button onClick={()=>setDateOpen(true)}>购买日期 <strong>{draft.date}</strong><ChevronRight size={17}/></button><label>购买价格<input inputMode="decimal" placeholder="选填（元）" value={draft.priceMinor===null?'':String(draft.priceMinor/100)} onChange={e=>{const value=e.target.value;if(value===''){setDraft({...draft,priceMinor:null});return}if(/^\d{0,8}(\.\d{0,2})?$/.test(value))setDraft({...draft,priceMinor:Math.round(Number(value)*100)})}}/></label></div>
+ <div className="goods-list goods-fields"><label>商品名称 <input placeholder="请输入商品名称" value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})}/></label><button onClick={()=>{setChoosePath([]);setMode('choose')}}>分类 <strong>{pathFor(draft.categoryId,cats)||'请选择分类'}</strong><ChevronRight size={17}/></button><label>品牌 / 店铺<input placeholder="选填" value={draft.brand} onChange={e=>setDraft({...draft,brand:e.target.value})}/></label><button onClick={()=>setDateOpen(true)}>购买日期 <strong>{draft.date}</strong><ChevronRight size={17}/></button><label>购买价格<input inputMode="decimal" placeholder="选填（元）" value={draft.priceMinor===null?'':String(draft.priceMinor/100)} onChange={e=>{const value=e.target.value;if(value===''){setDraft({...draft,priceMinor:null});return}if(/^\d{0,8}(\.\d{0,2})?$/.test(value))setDraft({...draft,priceMinor:Math.round(Number(value)*100)})}}/></label></div>
  <label className="goods-textarea">商品要点 <textarea rows={5} placeholder={'记录材质、配比、规格等关键信息…\n例如：白鸭绒、绒子含量90%、充绒量180g'} value={draft.highlights} onChange={e=>setDraft({...draft,highlights:e.target.value})}/></label>
  <label className="goods-textarea">使用评价 <textarea rows={4} placeholder="记录实际使用感受、优缺点…" value={draft.review} onChange={e=>setDraft({...draft,review:e.target.value})}/></label><div className="goods-rating"><h3>推荐状态</h3><div>{([['recommend','☆ 推荐'],['normal','一般'],['avoid','不推荐']] as const).map(([v,label])=><button className={draft.rating===v?'selected':''} key={v} onClick={()=>setDraft({...draft,rating:v})}>{label}</button>)}</div></div><button className="goods-save" disabled={saving} onClick={()=>void save()}>{saving?'保存中…':'保存好物'}</button></div>}
- {mode==='choose'&&draft&&<div className="goods-body"><p className="goods-muted">选择商品所属分类</p>{cats.map(c=><button className="goods-choice" style={{paddingLeft:18+pathFor(c.id,cats).split(' › ').length*13}} key={c.id} onClick={()=>{setDraft({...draft,categoryId:c.id});setMode('edit')}}>{pathFor(c.id,cats)}<ChevronRight size={15}/></button>)}</div>}
+ {mode==='choose'&&draft&&<div className="goods-body goods-choose-category">
+   <p className="goods-muted">{chooseParent?'继续选择子分类，或使用当前分类。':'先选择一级分类，再逐级进入需要的子分类。'}</p>
+   {chooseParent&&<button className="goods-category-use" onClick={()=>{setDraft({...draft,categoryId:chooseParent});setMode('edit')}}><Check size={18}/>使用当前分类：{pathFor(chooseParent,cats)}</button>}
+   {chooseChildren.length>0?<div className="goods-list">{chooseChildren.map(c=><button className="goods-row" key={c.id} onClick={()=>{setChoosePath(old=>[...old,c.id]);if(!cats.some(child=>child.parentId===c.id)){setDraft({...draft,categoryId:c.id});setMode('edit')}}}><Folder size={19}/><span>{c.name}</span><ChevronRight size={16}/></button>)}</div>:!chooseParent&&<p className="goods-category-empty">暂无分类，请先到「我的好物 → 管理」中添加。</p>}
+   {chooseParent&&<p className="goods-muted">当前路径：{pathFor(chooseParent,cats)}</p>}
+ </div>}
  {mode==='manage'&&<div className="goods-body goods-category-manager">
    {!categoryForm&&<>
      <p className="goods-category-location">{manageParent?<><button onClick={()=>{setManagePath([]);setActionCategory(null)}}>全部分类</button>{managePath.map((id,index)=><span key={id}><ChevronRight size={13}/><button onClick={()=>{setManagePath(managePath.slice(0,index+1));setActionCategory(null)}}>{cats.find(c=>c.id===id)?.name}</button></span>)}</>:'一级分类'}</p>
