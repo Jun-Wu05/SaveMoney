@@ -24,6 +24,8 @@ export type GoodsArchive = {
  exportedAt: string
  goods: GoodArchiveRecord[]
  categories: GoodCategory[]
+ purchases: GoodPurchase[]
+ consumptionGroups: ConsumptionGroup[]
 }
 const textCell = (value: string, height?: number):ExcelCell => ({ value: safeSpreadsheetText(value), wrap:true, alignVertical:'center', ...(height?{height}: {}) })
 const numberCell = (value:number):ExcelCell => ({value, alignVertical:'center'})
@@ -157,10 +159,10 @@ export async function exportGoodsExcel():Promise<void> {
  await shareOrSave(new File([blob],`我的好物_${timestamp()}.xlsx`,{type:XLSX_MIME}))
 }
 export async function exportGoodsZip():Promise<void> {
- const [goods,cats]=await readExportData()
+ const [goods,cats,purchases,groups]=await readExportData()
  const total=goods.reduce((n,g)=>n+g.image.length*.75,0)
  if(total>IMAGE_LIMIT_BYTES)throw new Error('照片合计超过100MB，请分批减少照片后导出')
- const excel=await generateExcel(goods,cats)
+ const excel=await generateExcel(goods,cats,purchases,groups)
  const {zip,strToU8}=await import('fflate')
  const items:Record<string,Uint8Array>={}
  items['我的好物.xlsx']=new Uint8Array(await excel.arrayBuffer())
