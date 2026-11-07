@@ -52,3 +52,19 @@
 .goods-search-results .goods-empty{min-height:160px;gap:9px}
 .goods-search-results .goods-empty strong{color:#60564d;font-size:15px}
 .goods-search-results .goods-empty span{font-size:12px;color:#92877e;line-height:1.6}
+
+/* Search field selector stays beside the search box on narrow iPhones. */
+.goods-search-bar{display:flex;align-items:stretch;gap:8px;position:relative}
+.goods-search-bar .goods-search{flex:1;min-width:0}
+.goods-search-field-wrap{position:relative;flex:none}
+.goods-search-field{height:41px;min-width:94px;max-width:126px;padding:5px 8px;border:1px solid #e5d8cc;border-radius:12px;background:#fffaf5;display:flex;align-items:center;gap:4px;color:#7d5441!important}
+.goods-search-field small{font-size:11px;color:#a58c7d;white-space:nowrap}
+.goods-search-field strong{font-size:12px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goods-search-field svg{flex:none;transform:rotate(90deg);transition:transform .15s}
+.goods-search-field svg.expanded{transform:rotate(-90deg)}
+.goods-field-popover{position:absolute;z-index:15;right:0;top:calc(100% + 7px);width:176px;background:#fff;border:1px solid #e8e0d7;border-radius:13px;box-shadow:0 13px 35px #1f181121;padding:6px;max-height:min(390px,55dvh);overflow-y:auto}
+.goods-field-popover button{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;padding:11px 10px;border:0;background:transparent;border-radius:8px;color:#4d463f!important;font-size:13px}
+.goods-field-popover button[aria-selected="true"]{background:#faf0e9;color:#af6449!important;font-weight:700}
+.goods-field-popover button:active{background:#f5eae1}
+.goods-search input{font-size:16px}
+@media(max-width:370px){.goods-search-bar{gap:5px}.goods-search-field{min-width:83px;padding:5px 6px}.goods-search-field strong{font-size:11px}}

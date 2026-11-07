@@ -29,21 +29,63 @@ const dateNow = () => { const d=new Date(); return [d.getFullYear(),String(d.get
 const emptyGood = (): Good => ({ id: crypto.randomUUID(),name:'',categoryId:'', brand:'',date:dateNow(),priceMinor:null,highlights:'',review:'',rating:'normal',image:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() })
 const descendants = (id:string, all:GoodCategory[]): Set<string> => { const ids=new Set([id]); for(let changed=true;changed;){changed=false;for(const c of all) if(c.parentId && ids.has(c.parentId) && !ids.has(c.id)){ids.add(c.id);changed=true}} return ids }
 function pathFor(id:string,all:GoodCategory[]):string { const out:string[]=[];const seen=new Set<string>();let current=all.find(c=>c.id===id);while(current&&!seen.has(current.id)){seen.add(current.id);out.unshift(current.name);current=all.find(c=>c.id===current?.parentId)}return out.join(' › ') }
-export function findGoods(goods:Good[],cats:GoodCategory[],query:string) {
+export type GoodsSearchField = 'name'|'all'|'category'|'brand'|'highlights'|'review'|'price'|'date'|'rating'
+export const goodsSearchFields: {value:GoodsSearchField;label:string}[] = [
+ {value:'name',label:'商品名称'}, {value:'all',label:'全部字段'}, {value:'category',label:'分类'},
+ {value:'brand',label:'品牌 / 店铺'}, {value:'highlights',label:'商品要点'},
+ {value:'review',label:'使用评价'}, {value:'price',label:'购买价格'},
+ {value:'date',label:'购买日期'}, {value:'rating',label:'推荐状态'},
+]
+const ratingLabel=(rating:Good['rating'])=>rating==='recommend'?'推荐 回购':rating==='avoid'?'不推荐':'一般'
+const priceMatch=(minor:number|null,query:string)=> {
+ if(minor===null)return false
+ const clean=query.replace(/[¥￥,，\s]/g,'').trim()
+ return /^\d+(?:\.\d{1,2})?$/.test(clean) && Math.round(Number(clean)*100)===minor
+}
+const dateMatch=(date:string,query:string,explicit:boolean)=>{
+ const clean=query.trim().replaceAll('/','-')
+ return explicit ? /^\d{4}-\d{2}(?:-\d{2})?$/.test(clean) && date.startsWith(clean)
+  : /^\d{4}-\d{2}-\d{2}$/.test(clean) && date===clean
+}
+const textMatches=(value:string,words:string[])=>words.every(w=>value.toLocaleLowerCase().includes(w))
+export function findGoods(goods:Good[],cats:GoodCategory[],query:string,field:GoodsSearchField='all') {
  const words=query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
  if(!words.length)return goods
- return goods.filter(g=>{const haystack=[g.name,g.brand,g.date,g.priceMinor===null?'':String(g.priceMinor/100),g.highlights,g.review,g.rating==='recommend'?'推荐 回购':g.rating==='avoid'?'不推荐':'一般',pathFor(g.categoryId,cats)].join(' ').toLocaleLowerCase();return words.every(w=>haystack.includes(w))})
+ const textFor=(g:Good,f:GoodsSearchField):string=>{
+  if(f==='name')return g.name
+  if(f==='category')return pathFor(g.categoryId,cats)
+  if(f==='brand')return g.brand
+  if(f==='highlights')return g.highlights
+  if(f==='review')return g.review
+  if(f==='rating')return ratingLabel(g.rating)
+  return ''
+ }
+ if(field==='price')return goods.filter(g=>priceMatch(g.priceMinor,query))
+ if(field==='date')return goods.filter(g=>dateMatch(g.date,query,true))
+ if(field!=='all')return goods.filter(g=>textMatches(textFor(g,field),words))
+ return goods.filter(g=> {
+  const searchable=['name','category','brand','highlights','review','rating'] as const
+  return words.every(word=>searchable.some(f=>textFor(g,f).toLocaleLowerCase().includes(word)) ||
+   priceMatch(g.priceMinor,word) || dateMatch(g.date,word,false))
+ })
 }
-export function searchReason(g:Good,cats:GoodCategory[],query:string):string {
+export function searchReason(g:Good,cats:GoodCategory[],query:string,field:GoodsSearchField='all'):string {
  const words=query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
- const items:[string,string][]=[
-  ['商品要点',g.highlights],['使用评价',g.review],['品牌 / 店铺',g.brand],['分类',pathFor(g.categoryId,cats)],
-  ['购买日期',g.date],['购买价格',g.priceMinor===null?'':String(g.priceMinor/100)],
+ const candidates:[GoodsSearchField,string,string][]=[
+  ['name','商品名称',g.name],['highlights','商品要点',g.highlights],
+  ['review','使用评价',g.review],['brand','品牌 / 店铺',g.brand],
+  ['category','分类',pathFor(g.categoryId,cats)],['rating','推荐状态',ratingLabel(g.rating)],
+  ['price','购买价格',g.priceMinor===null?'':'¥'+(g.priceMinor/100).toFixed(2)],
+  ['date','购买日期',g.date],
  ]
- const match=items.find(([,value])=>words.some(word=>value.toLocaleLowerCase().includes(word)))
- if(!match)return '商品名称：'+g.name
- const excerpt=match[1].split('\n').find(line=>words.some(word=>line.toLocaleLowerCase().includes(word)))??match[1]
- return match[0]+'：'+excerpt.slice(0,65)
+ const items=field==='all'?candidates:candidates.filter(c=>c[0]===field)
+ const matching=items.find(([key,,value])=>key==='price'?priceMatch(g.priceMinor,query):
+  key==='date'?dateMatch(g.date,query,field==='date'):
+  words.some(w=>value.toLocaleLowerCase().includes(w)))
+ if(!matching)return '商品名称：'+g.name
+ const [,label,value]=matching
+ const excerpt=value.split('\n').find(line=>words.some(w=>line.toLocaleLowerCase().includes(w)))??value
+ return label+'：'+excerpt.slice(0,65)
 }
 async function loadPhoto(file:File):Promise<string> {
  if(!file.type.startsWith('image/'))throw new Error('请选择图片文件')
@@ -65,6 +107,8 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const [draft,setDraft]=useState<Good|null>(null)
  const [detail,setDetail]=useState<string|null>(null)
  const [query,setQuery]=useState('')
+ const [searchField,setSearchField]=useState<GoodsSearchField>('name')
+ const [fieldMenuOpen,setFieldMenuOpen]=useState(false)
  const [filter,setFilter]=useState<'all'|'recommend'|'recent'>('all')
  const [saving,setSaving]=useState(false)
  const [error,setError]=useState('')
@@ -90,14 +134,15 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const searchCategories=useMemo(()=>{
   if(!searching)return []
   const keywords=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
+  if(searchField!=='category'&&searchField!=='all')return []
   return cats.filter(c=>(!currentIds||currentIds.has(c.id)) && keywords.every(w=>pathFor(c.id,cats).toLocaleLowerCase().includes(w)))
- },[cats,query,active,searching])
+ },[cats,query,active,searching,searchField])
  const matched=useMemo(()=>{
    let list=all.filter(g=>!currentIds||currentIds.has(g.categoryId))
-   list=findGoods(list,cats,query)
+   list=findGoods(list,cats,query,searchField)
    if(filter==='recommend')list=list.filter(g=>g.rating==='recommend')
    return list.sort((a,b)=>filter==='recent'?b.createdAt.localeCompare(a.createdAt):b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt))
- },[all,cats,query,filter,active])
+ },[all,cats,query,filter,active,searchField])
  const goBack=()=>{
   setError('')
   if(mode==='choose'){if(choosePath.length){setChoosePath(old=>old.slice(0,-1));return}setMode('edit');return}
@@ -219,11 +264,15 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  return <div className="goods-screen"><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<button aria-label="添加好物" onClick={()=>edit()}><Plus size={23}/></button>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
  {error&&<p className="goods-error" role="alert">{error}</p>}
  {mode==='browse'&&<div className="goods-body">
-  <label className="goods-search"><Search size={17}/><input type="search" value={query} onChange={e=>{setQuery(e.target.value);if(e.target.value.trim())setFilter('all')}} placeholder={active?'搜索此分类的商品、材质、价格…':'搜索名称、分类、材质、参数、店铺…'} aria-label="搜索好物和分类"/>{query&&<button className="goods-search-clear" type="button" aria-label="清除搜索" onClick={()=>setQuery('')}>×</button>}</label>
+  <div className="goods-search-bar">
+   <label className="goods-search"><Search size={17}/><input type="search" value={query} onChange={e=>{setQuery(e.target.value);if(e.target.value.trim())setFilter('all')}} placeholder={searchField==='price'?'例如 799 或 799.50':searchField==='date'?'例如 2026-11 或 2026-11-07':'输入关键词搜索'} aria-label="搜索好物"/>{query&&<button className="goods-search-clear" type="button" aria-label="清除搜索" onClick={()=>setQuery('')}>×</button>}</label>
+   <div className="goods-search-field-wrap"><button className="goods-search-field" type="button" aria-label={'根据'+goodsSearchFields.find(f=>f.value===searchField)?.label+'搜索'} aria-haspopup="listbox" aria-expanded={fieldMenuOpen} onClick={()=>setFieldMenuOpen(v=>!v)}><small>根据</small><strong>{goodsSearchFields.find(f=>f.value===searchField)?.label}</strong><ChevronRight size={14} className={fieldMenuOpen?'expanded':''}/></button>
+   {fieldMenuOpen&&<div className="goods-field-popover" role="listbox" aria-label="选择搜索字段">{goodsSearchFields.map(item=><button type="button" role="option" aria-selected={searchField===item.value} key={item.value} onClick={()=>{setSearchField(item.value);setFieldMenuOpen(false);setFilter('all')}}><span>{item.label}</span>{searchField===item.value&&<Check size={16}/>}</button>)}</div>}</div>
+  </div>
   {searching ? <div className="goods-search-results" role="region" aria-label="搜索结果">
-    <div className="goods-search-summary" role="status">找到 {searchCategories.length} 个分类、{matched.length} 件好物</div>
+    <div className="goods-search-summary" role="status">根据「{goodsSearchFields.find(f=>f.value===searchField)?.label}」找到 {searchCategories.length} 个分类、{matched.length} 件好物</div>
     {searchCategories.length>0&&<section><div className="goods-section-head"><h3>相关分类</h3></div><div className="goods-list">{searchCategories.map(c=><button className="goods-row" key={c.id} onClick={()=>{const chain:string[]=[];const seen=new Set<string>();let node:GoodCategory|undefined=c;while(node&&!seen.has(node.id)){chain.unshift(node.id);seen.add(node.id);node=cats.find(parent=>parent.id===node?.parentId)}setStack(chain);setQuery('');setFilter('all')}}><Folder size={19}/><span>{pathFor(c.id,cats)}</span><ChevronRight size={17}/></button>)}</div></section>}
-    {matched.length>0&&<section><div className="goods-section-head"><h3>相关好物</h3></div><div className="goods-products">{matched.map(item=><button key={item.id} className="goods-product" onClick={()=>openDetail(item.id)}>{item.image?<img src={item.image} alt=""/>:<span className="goods-no-photo"><ImagePlus size={19}/></span>}<span className="goods-product-desc"><strong>{item.name}</strong><small>{searchReason(item,cats,query)}</small><em>{moneyLabel(item.priceMinor)}</em></span><ChevronRight size={14}/></button>)}</div></section>}
+    {matched.length>0&&<section><div className="goods-section-head"><h3>相关好物</h3></div><div className="goods-products">{matched.map(item=><button key={item.id} className="goods-product" onClick={()=>openDetail(item.id)}>{item.image?<img src={item.image} alt=""/>:<span className="goods-no-photo"><ImagePlus size={19}/></span>}<span className="goods-product-desc"><strong>{item.name}</strong><small>{searchReason(item,cats,query,searchField)}</small><em>{moneyLabel(item.priceMinor)}</em></span><ChevronRight size={14}/></button>)}</div></section>}
     {!matched.length&&!searchCategories.length&&<div className="goods-empty"><strong>没有找到相关内容</strong><span>试试商品名称、分类、品牌、价格或商品要点</span></div>}
   </div> : <>
   {!active&&<section className="goods-shortcuts">{[['all','全部好物',all.length],['recommend','推荐回购',all.filter(g=>g.rating==='recommend').length],['recent','最近添加',all.length]] .map(([key,label,count])=><button key={key} className={filter===key?'on':''} onClick={()=>setFilter(key as typeof filter)}><span>{label}</span><small>{count}</small></button>)}</section>}
