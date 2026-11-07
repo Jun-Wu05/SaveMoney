@@ -12,13 +12,24 @@ const example:Good={id:'good1',name:'冬季羽绒服',categoryId:'down',brand:'=
  highlights:'绒子含量：90%\n充绒量：180g',review:'第一天不错\n第二天很暖和',
  rating:'recommend',image:'',createdAt:'2026-11-07T01:00:00Z',updatedAt:'2026-11-07T01:00:00Z'}
 describe('我的好物 Excel 导出结构',()=>{
- it('exports 3 sheets with item details and intact multiline notes',()=>{
+ it('exports 5 sheets with item details and intact multiline notes',()=>{
   const sheets=buildGoodsExportSheets([example],categories)
-  expect(sheets.map(s=>s.sheet)).toEqual(['全部好物','分类目录','AI分析说明'])
+  expect(sheets.map(s=>s.sheet)).toEqual(['全部好物','分类目录','购买记录','消耗组统计','AI分析说明'])
   expect(sheets[0].data[1].some(cell=>String(cell.value).includes('充绒量：180g'))).toBe(true)
   expect(sheets[0].data[1].some(cell=>String(cell.value).includes('第二天很暖和'))).toBe(true)
   expect(sheets[0].data[1].some(cell=>cell.value===799)).toBe(true)
   expect(sheets[0].data[1].some(cell=>cell.value==="'=danger")).toBe(true)
+ })
+ it('exports purchase records and consumption group statistics',()=>{
+  const group={id:'paper',name:'抽纸',createdAt:'2026-11-07T01:00:00Z'}
+  const purchase={id:'p1',goodId:'good1',date:'2026-11-07',priceMinor:1200,quantity:2,note:'回购',createdAt:'2026-11-07T01:00:00Z'}
+  const sheets=buildGoodsExportSheets([{...example,consumptionGroupId:'paper'}],categories,new Date().toISOString(),[purchase],[group])
+  expect(sheets[2].data[1].some(cell=>cell.value==='回购')).toBe(true)
+  expect(sheets[2].data[1].some(cell=>cell.value===24)).toBe(true)
+  expect(sheets[3].data[1].some(cell=>cell.value==='抽纸')).toBe(true)
+  const archive=buildGoodsArchive([example],categories,new Date().toISOString(),[purchase],[group])
+  expect(archive.purchases).toHaveLength(1)
+  expect(archive.consumptionGroups).toHaveLength(1)
  })
  it('keeps empty categories and full nested path',()=>{
   expect(goodsCategoryPath('down',categories)).toEqual(['服装','上衣','羽绒服'])
