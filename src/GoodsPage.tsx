@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, MoreHorizontal, GripVertical } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, MoreHorizontal, GripVertical, Download, FileSpreadsheet, Archive } from 'lucide-react'
 import { db, type Good, type GoodCategory } from './db'
 import { DateWheelPicker } from './DateWheelPicker'
 import { installGoodsPwaZoomRecovery } from './goodsPwaZoom'
+import { exportGoodsExcel, exportGoodsZip } from './goodsExport'
 import './GoodsPage.css'
 
 const initial: Array<[string,string|null]> = [
@@ -106,7 +107,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const categories=useLiveQuery(()=>db.goodCategories.toArray(),[],[])
  const goods=useLiveQuery(()=>db.goods.toArray(),[],[])
  const [stack,setStack]=useState<string[]>([])
- const [mode,setMode]=useState<'browse'|'edit'|'detail'|'manage'|'choose'>('browse')
+ const [mode,setMode]=useState<'browse'|'edit'|'detail'|'manage'|'choose'|'export'>('browse')
  const [draft,setDraft]=useState<Good|null>(null)
  const [detail,setDetail]=useState<string|null>(null)
  const [query,setQuery]=useState('')
@@ -115,6 +116,8 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const [filter,setFilter]=useState<'all'|'recommend'|'recent'>('all')
  const [saving,setSaving]=useState(false)
  const [error,setError]=useState('')
+ const [exportBusy,setExportBusy]=useState(false)
+ const [exportStatus,setExportStatus]=useState('')
  const [dateOpen,setDateOpen]=useState(false)
  const [managePath,setManagePath]=useState<string[]>([])
  const [choosePath,setChoosePath]=useState<string[]>([])
@@ -148,6 +151,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  },[all,cats,query,filter,active,searchField])
  const goBack=()=>{
   setError('')
+  if(mode==='export'){setMode('browse');setExportStatus('');return}
   if(mode==='choose'){if(choosePath.length){setChoosePath(old=>old.slice(0,-1));return}setMode('edit');return}
   if(mode==='manage'){
     if(categoryForm){setCategoryForm(false);setEditingCategory(null);setCategoryName('');return}
@@ -263,9 +267,27 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  }
  const chooseParent=choosePath.at(-1)??null
  const chooseChildren=cats.filter(c=>c.parentId===chooseParent)
- const headerTitle=mode==='edit'?'添加 / 编辑好物':mode==='detail'?'好物详情':mode==='manage'?(manageParent?cats.find(c=>c.id===manageParent)?.name??'分类管理':'分类管理'):mode==='choose'?(chooseParent?cats.find(c=>c.id===chooseParent)?.name??'选择分类':'选择分类'):activeCategory?.name??'我的好物'
- return <div className="goods-screen" ref={screenRef}><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<button aria-label="添加好物" onClick={()=>edit()}><Plus size={23}/></button>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
+ const runGoodsExport=async(format:'xlsx'|'zip')=>{
+  if(exportBusy)return
+  setExportBusy(true);setExportStatus('')
+  try{
+   if(format==='xlsx')await exportGoodsExcel()
+   else await exportGoodsZip()
+   setExportStatus('已生成文件，请在 iPhone 分享菜单中选择「存储到文件」，或检查浏览器下载。')
+  }catch(e){setExportStatus(e instanceof Error?e.message:'导出失败，请检查设备剩余空间')}
+  finally{setExportBusy(false)}
+ }
+ const headerTitle=mode==='export'?'导出我的好物':mode==='edit'?'添加 / 编辑好物':mode==='detail'?'好物详情':mode==='manage'?(manageParent?cats.find(c=>c.id===manageParent)?.name??'分类管理':'分类管理'):mode==='choose'?(chooseParent?cats.find(c=>c.id===chooseParent)?.name??'选择分类':'选择分类'):activeCategory?.name??'我的好物'
+ return <div className="goods-screen" ref={screenRef}><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<div className="goods-header-actions"><button aria-label="导出好物" title="导出好物" onClick={()=>{setExportStatus('');setMode('export')}}><Download size={21}/></button><button aria-label="添加好物" title="添加好物" onClick={()=>edit()}><Plus size={23}/></button></div>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
  {error&&<p className="goods-error" role="alert">{error}</p>}
+ {mode==='export'&&<div className="goods-body goods-export-page">
+   <p className="goods-export-hint">导出范围：全部 {all.length} 件好物、{cats.length} 个分类（包含空分类）。本模块独立导出，不包含账单。</p>
+   <button type="button" className="goods-export-option" disabled={exportBusy} onClick={()=>void runGoodsExport('xlsx')}><span className="goods-export-option-icon"><FileSpreadsheet size={23}/></span><span><strong>导出 Excel 清单</strong><small>带商品照片的 .xlsx · 全部好物、分类目录、AI 分析说明</small></span><ChevronRight size={18}/></button>
+   <button type="button" className="goods-export-option" disabled={exportBusy} onClick={()=>void runGoodsExport('zip')}><span className="goods-export-option-icon"><Archive size={23}/></span><span><strong>导出完整备份 ZIP</strong><small>Excel + 独立商品照片 + 好物原始数据 backup.json</small></span><ChevronRight size={18}/></button>
+   <p className="goods-export-note">照片会嵌入 Excel 第一列（64×64 缩略图）。ZIP 额外保存原始照片和完整分类层级、商品数据，便于未来迁移；目前 ZIP 不支持直接在 App 内导入。导出数据会离开本地设备，请妥善保存。</p>
+   {exportBusy&&<p className="goods-export-feedback" role="status">正在生成文件，请不要关闭页面…</p>}
+   {exportStatus&&<p className="goods-export-feedback" role="status">{exportStatus}</p>}
+ </div>}
  {mode==='browse'&&<div className="goods-body">
   <div className="goods-search-bar">
    <label className="goods-search"><Search size={17}/><input type="search" value={query} onChange={e=>{setQuery(e.target.value);if(e.target.value.trim())setFilter('all')}} placeholder={searchField==='price'?'例如 799 或 799.50':searchField==='date'?'例如 2026-11 或 2026-11-07':'输入关键词搜索'} aria-label="搜索好物"/>{query&&<button className="goods-search-clear" type="button" aria-label="清除搜索" onClick={()=>setQuery('')}>×</button>}</label>
