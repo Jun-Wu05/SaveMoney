@@ -230,8 +230,8 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
         const subCount=cats.filter(x=>x.parentId===c.id).length
         return <div className="goods-manage-item" key={c.id} data-goods-sort-id={c.id}>
           <button className="goods-manage-open" onClick={()=>{setManagePath(old=>[...old,c.id]);setActionCategory(null);setError('')}}><Folder size={19}/><span><strong>{c.name}</strong><small>{subCount} 个子分类 · {total} 件商品</small></span><ChevronRight size={17}/></button>
-          <button type="button" className="goods-category-drag-handle" aria-label={`调整${c.name}顺序，按住拖动或使用上下方向键`} title="按住拖动排序" onPointerDown={e=>dragCategory(e,c.id)} onKeyDown={e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();moveByKeyboard(c.id,e.key==='ArrowUp'?-1:1)}}}><GripVertical size={21}/></button>
           <button type="button" className="goods-manage-more" aria-label={`管理「${c.name}」`} aria-expanded={actionCategory===c.id} onClick={()=>{setActionCategory(actionCategory===c.id?null:c.id);setError('')}}><MoreHorizontal size={21}/></button>
+          <button type="button" className="goods-category-drag-handle" aria-label={`调整${c.name}顺序，按住拖动或使用上下方向键`} title="按住拖动排序" onPointerDown={e=>dragCategory(e,c.id)} onKeyDown={e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();moveByKeyboard(c.id,e.key==='ArrowUp'?-1:1)}}}><GripVertical size={21}/></button>
           {actionCategory===c.id&&<div className="goods-category-actions">
              <button onClick={()=>openCategoryForm(c)}><Pencil size={15}/>重命名</button>
              <button className="goods-category-danger" onClick={()=>void deleteCategory(c.id)}><Trash2 size={15}/>删除</button>
