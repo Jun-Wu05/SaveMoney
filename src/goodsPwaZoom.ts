@@ -26,8 +26,10 @@ export function installGoodsPwaZoomRecovery(container: HTMLElement): () => void 
   let userPinched = false
   let editing = false
   let lastHeight = viewport.height
+  let keyboardClosed = false
   let restoring = false
   let restoreTimer = 0
+  const originalViewportContent = meta.getAttribute('content')
   const recoveryTimers = new Set<number>()
 
   const isEditor = (target: EventTarget | null): target is HTMLElement =>
@@ -42,7 +44,7 @@ export function installGoodsPwaZoomRecovery(container: HTMLElement): () => void 
 
   const tryRestore = () => {
     if (!editing || restoring) return
-    if (isEditor(document.activeElement)) return
+    if (isEditor(document.activeElement) && !keyboardClosed) return
     if (!shouldRestoreGoodsZoom(true, initialScale, viewport.scale, userPinched)) return
     // Clamp the zoom just long enough for WebKit to recompute the visual viewport.
     // Restore on a later frame: never leave pinch-to-zoom disabled.
@@ -77,11 +79,13 @@ export function installGoodsPwaZoomRecovery(container: HTMLElement): () => void 
       userPinched = false
     }
     editing = true
+    keyboardClosed = false
   }
   const onFocusOut = (event: FocusEvent) => {
     if (!isEditor(event.target)) return
     // New input may receive focus in the same microtask. Recovery only runs
     // when no goods input is actively editing.
+    keyboardClosed = true
     scheduleRecovery()
   }
   const onTouchStart = (event: TouchEvent) => {
@@ -90,7 +94,7 @@ export function installGoodsPwaZoomRecovery(container: HTMLElement): () => void 
   const onResize = () => {
     const nextHeight = viewport.height
     // Keyboard dismissal can occur without blur on the installed home-screen app.
-    if (editing && nextHeight - lastHeight > 90) scheduleRecovery()
+    if (editing && nextHeight - lastHeight > 90) {keyboardClosed = true; scheduleRecovery()}
     lastHeight = nextHeight
   }
   const onTouchEnd = () => {
@@ -107,7 +111,7 @@ export function installGoodsPwaZoomRecovery(container: HTMLElement): () => void 
     window.clearTimeout(restoreTimer)
     if (restoring) {
       // The temporary content is not persisted when the screen unmounts.
-      meta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover')
+      if (originalViewportContent !== null) meta.setAttribute('content', originalViewportContent)
     }
     container.removeEventListener('focusin', onFocusIn)
     container.removeEventListener('focusout', onFocusOut)
