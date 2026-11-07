@@ -43,3 +43,12 @@
 .goods-manage-item{will-change:transform}
 .goods-manage-item[data-drag-active="true"]{border-radius:10px}
 .goods-category-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* Search is a dedicated results state: show feedback immediately below input. */
+.goods-search-clear{flex:0 0 29px;width:29px;height:29px;display:grid;place-items:center;border:0;border-radius:50%;background:#e1dbd5;color:#51483f!important;font-size:20px;line-height:1}
+.goods-search-results{padding:5px 0 24px}
+.goods-search-summary{font-size:13px;color:#766d64;padding:12px 2px 3px}
+.goods-search-results .goods-section-head{margin-top:19px}
+.goods-search-results .goods-empty{min-height:160px;gap:9px}
+.goods-search-results .goods-empty strong{color:#60564d;font-size:15px}
+.goods-search-results .goods-empty span{font-size:12px;color:#92877e;line-height:1.6}

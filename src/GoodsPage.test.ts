@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findGoods } from './GoodsPage'
+import { findGoods, searchReason } from './GoodsPage'
 import type { Good, GoodCategory } from './db'
 
 const cats: GoodCategory[] = [
@@ -20,5 +20,16 @@ describe('好物全字段搜索',()=>{
  })
  it('uses AND for multiple words and matches no unrelated goods',()=>{
   expect(findGoods([item],cats,'羽绒服 京东')).toHaveLength(0)
+ })
+})
+
+describe('搜索匹配原因',()=>{
+ it('shows matching field when a numeric detail is searched',()=>{
+  expect(searchReason(item,cats,'90%')).toContain('商品要点：')
+  expect(searchReason(item,cats,'2026-11')).toContain('购买日期：')
+  expect(searchReason(item,cats,'799')).toContain('购买价格：')
+ })
+ it('returns category path for a category match',()=>{
+  expect(searchReason(item,cats,'服装')).toContain('分类：')
  })
 })

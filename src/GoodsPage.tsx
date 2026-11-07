@@ -34,6 +34,17 @@ export function findGoods(goods:Good[],cats:GoodCategory[],query:string) {
  if(!words.length)return goods
  return goods.filter(g=>{const haystack=[g.name,g.brand,g.date,g.priceMinor===null?'':String(g.priceMinor/100),g.highlights,g.review,g.rating==='recommend'?'推荐 回购':g.rating==='avoid'?'不推荐':'一般',pathFor(g.categoryId,cats)].join(' ').toLocaleLowerCase();return words.every(w=>haystack.includes(w))})
 }
+export function searchReason(g:Good,cats:GoodCategory[],query:string):string {
+ const words=query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
+ const items:[string,string][]=[
+  ['商品要点',g.highlights],['使用评价',g.review],['品牌 / 店铺',g.brand],['分类',pathFor(g.categoryId,cats)],
+  ['购买日期',g.date],['购买价格',g.priceMinor===null?'':String(g.priceMinor/100)],
+ ]
+ const match=items.find(([,value])=>words.some(word=>value.toLocaleLowerCase().includes(word)))
+ if(!match)return '商品名称：'+g.name
+ const excerpt=match[1].split('\n').find(line=>words.some(word=>line.toLocaleLowerCase().includes(word)))??match[1]
+ return match[0]+'：'+excerpt.slice(0,65)
+}
 async function loadPhoto(file:File):Promise<string> {
  if(!file.type.startsWith('image/'))throw new Error('请选择图片文件')
  if(file.size>20_000_000)throw new Error('图片超过 20MB，请选择较小的照片')
@@ -75,6 +86,12 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const current=all.find(g=>g.id===detail)
  const currentIds=active?descendants(active,cats):null
  const children=cats.filter(c=>c.parentId===active)
+ const searching=query.trim().length>0
+ const searchCategories=useMemo(()=>{
+  if(!searching)return []
+  const keywords=query.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean)
+  return cats.filter(c=>(!currentIds||currentIds.has(c.id)) && keywords.every(w=>pathFor(c.id,cats).toLocaleLowerCase().includes(w)))
+ },[cats,query,active,searching])
  const matched=useMemo(()=>{
    let list=all.filter(g=>!currentIds||currentIds.has(g.categoryId))
    list=findGoods(list,cats,query)
@@ -202,12 +219,18 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  return <div className="goods-screen"><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<button aria-label="添加好物" onClick={()=>edit()}><Plus size={23}/></button>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
  {error&&<p className="goods-error" role="alert">{error}</p>}
  {mode==='browse'&&<div className="goods-body">
-  <label className="goods-search"><Search size={17}/><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder={active?'搜索此分类的商品、材质、价格…':'搜索名称、材质、参数、店铺…'}/></label>
+  <label className="goods-search"><Search size={17}/><input type="search" value={query} onChange={e=>{setQuery(e.target.value);if(e.target.value.trim())setFilter('all')}} placeholder={active?'搜索此分类的商品、材质、价格…':'搜索名称、分类、材质、参数、店铺…'} aria-label="搜索好物和分类"/>{query&&<button className="goods-search-clear" type="button" aria-label="清除搜索" onClick={()=>setQuery('')}>×</button>}</label>
+  {searching ? <div className="goods-search-results" role="region" aria-label="搜索结果">
+    <div className="goods-search-summary" role="status">找到 {searchCategories.length} 个分类、{matched.length} 件好物</div>
+    {searchCategories.length>0&&<section><div className="goods-section-head"><h3>相关分类</h3></div><div className="goods-list">{searchCategories.map(c=><button className="goods-row" key={c.id} onClick={()=>{const chain:string[]=[];const seen=new Set<string>();let node:GoodCategory|undefined=c;while(node&&!seen.has(node.id)){chain.unshift(node.id);seen.add(node.id);node=cats.find(parent=>parent.id===node?.parentId)}setStack(chain);setQuery('');setFilter('all')}}><Folder size={19}/><span>{pathFor(c.id,cats)}</span><ChevronRight size={17}/></button>)}</div></section>}
+    {matched.length>0&&<section><div className="goods-section-head"><h3>相关好物</h3></div><div className="goods-products">{matched.map(item=><button key={item.id} className="goods-product" onClick={()=>openDetail(item.id)}>{item.image?<img src={item.image} alt=""/>:<span className="goods-no-photo"><ImagePlus size={19}/></span>}<span className="goods-product-desc"><strong>{item.name}</strong><small>{searchReason(item,cats,query)}</small><em>{moneyLabel(item.priceMinor)}</em></span><ChevronRight size={14}/></button>)}</div></section>}
+    {!matched.length&&!searchCategories.length&&<div className="goods-empty"><strong>没有找到相关内容</strong><span>试试商品名称、分类、品牌、价格或商品要点</span></div>}
+  </div> : <>
   {!active&&<section className="goods-shortcuts">{[['all','全部好物',all.length],['recommend','推荐回购',all.filter(g=>g.rating==='recommend').length],['recent','最近添加',all.length]] .map(([key,label,count])=><button key={key} className={filter===key?'on':''} onClick={()=>setFilter(key as typeof filter)}><span>{label}</span><small>{count}</small></button>)}</section>}
   {children.length>0&&<><div className="goods-section-head"><h3>{active?'子分类':'我的分类'}</h3>{!active&&<button onClick={()=>{setManagePath([]);setActionCategory(null);setCategoryForm(false);setMode('manage')}}>管理</button>}</div><div className="goods-list">{children.map(c=><button className="goods-row" key={c.id} onClick={()=>{setStack(s=>[...s,c.id]);setQuery('');setFilter('all')}}><Folder size={19}/><span>{c.name}</span><small>{all.filter(g=>descendants(c.id,cats).has(g.categoryId)).length}</small><ChevronRight size={17}/></button>)}</div></>}
   {(active||query||filter!=='all')&&<div className="goods-section-head"><h3>全部商品（{matched.length}）</h3><span>按购买日期排序</span></div>}
   {matched.length>0&&<div className="goods-products">{matched.slice(0,active||query||filter!=='all'?undefined:5).map(item=><button key={item.id} className="goods-product" onClick={()=>openDetail(item.id)}>{item.image?<img src={item.image} alt=""/>:<span className="goods-no-photo"><ImagePlus size={19}/></span>}<span className="goods-product-desc"><strong>{item.name}</strong><small>{item.highlights.trim().split('\n')[0]?.slice(0,45)||pathFor(item.categoryId,cats)}</small><em>{moneyLabel(item.priceMinor)}</em></span>{item.rating==='recommend'&&<span className="goods-badge"><Star size={12} fill="currentColor"/>推荐</span>}<ChevronRight size={14}/></button>)}</div>}
-  {!matched.length&&<div className="goods-empty">{all.length?'没有找到相关商品':'还没有好物，点击右上角 + 开始记录。'}</div>}
+  {!matched.length&&<div className="goods-empty">{all.length?'没有找到相关商品':'还没有好物，点击右上角 + 开始记录。'}</div>}  </>}
  </div>}
  {mode==='detail'&&current&&<div className="goods-body goods-detail">{current.image?<img className="goods-hero-img" src={current.image} alt={current.name}/>:<div className="goods-hero-placeholder"><ImagePlus/>暂无图片</div>}<div className="goods-detail-name"><h2>{current.name}</h2>{current.rating==='recommend'&&<span className="goods-badge">★ 推荐</span>}{current.rating==='avoid'&&<span className="goods-badge neutral">不推荐</span>}</div><div className="goods-price">{moneyLabel(current.priceMinor)}</div><div className="goods-list">{[['分类',pathFor(current.categoryId,cats)],['品牌 / 店铺',current.brand],['购买日期',current.date],['购买价格',moneyLabel(current.priceMinor)]].filter(([,v])=>Boolean(v)).map(([k,v])=><div className="goods-info-row" key={k}><span>{k}</span><strong>{v}</strong></div>)}</div>{current.highlights&&<section className="goods-note"><h3>商品要点</h3><p>{current.highlights}</p></section>}{current.review&&<section className="goods-note"><h3>使用评价</h3><p>{current.review}</p></section>}<button className="goods-delete" onClick={()=>void erase()}><Trash2 size={16}/> 删除好物</button></div>}
  {mode==='edit'&&draft&&<div className="goods-body goods-form"><label className="goods-photo-input">{draft.image?<img src={draft.image} alt="商品照片"/>:<><ImagePlus size={27}/><span>添加照片</span></>}<input type="file" accept="image/*" onChange={(e:ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(f)void loadPhoto(f).then(v=>setDraft(d=>d?{...d,image:v}:d)).catch(err=>setError(err.message));e.currentTarget.value=''}}/></label>{draft.image&&<button className="goods-remove-photo" onClick={()=>setDraft({...draft,image:''})}>移除照片</button>}
