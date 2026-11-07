@@ -29,3 +29,10 @@
 .goods-category-form-actions button{flex:1;border:1px solid var(--goods-line);border-radius:11px;padding:13px 5px;background:#f7f4f0;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px}
 .goods-category-form-actions button:last-child{background:var(--goods-accent);color:white;border-color:var(--goods-accent)}
 .goods-category-form-actions button:disabled{opacity:.45}
+
+/* iPhone category picker: browse a single folder level rather than an indented tree. */
+.goods-choose-category .goods-muted{line-height:1.7;margin:4px 0 16px}
+.goods-category-use{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;border:1px solid #d8b19e;background:#faede4;color:#ad674d!important;border-radius:13px;min-height:49px;font-weight:650;margin-bottom:15px;padding:11px 10px;text-align:center;overflow-wrap:anywhere}
+.goods-choose-category .goods-list{margin:12px 0 16px}
+.goods-category-manager .goods-category-form-actions button:focus-visible,
+.goods-choose-category button:focus-visible{outline:2px solid var(--goods-accent);outline-offset:2px}
