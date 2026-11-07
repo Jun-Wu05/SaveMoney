@@ -1017,3 +1017,5 @@
 .date-wheel-item{scroll-snap-align:center;width:100%;height:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border:0;background:transparent;color:#a1a9a2;font-size:19px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .date-wheel-item.active{color:#263a2b;font-weight:650;font-size:21px}
 .date-wheel-caption{text-align:center;color:#88938b;font-size:11px;padding-top:8px}
+
+.goods-settings-actions{display:flex;align-items:center;gap:6px}.goods-settings-actions button{min-width:38px}.goods-settings-action-label{font-size:12px;font-weight:650;color:#b66d54;background:#f5e9e1;border:1px solid #ecd5c7;border-radius:9px;padding:8px 10px;white-space:nowrap}

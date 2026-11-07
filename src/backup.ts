@@ -1,8 +1,8 @@
-import { db, type Category, type Entry, type Budget, type CategoryBudget } from './db'
+import { db, type Category, type Entry, type Budget, type CategoryBudget, type Good, type GoodCategory } from './db'
 
 export const BACKUP_FORMAT = 'savemoney-backup'
 export const BACKUP_VERSION = 1
-const MAX_BACKUP_CHARS = 20_000_000
+const MAX_BACKUP_CHARS = 80_000_000
 const MAX_ITEMS = 100_000
 
 export type BackupData = {
@@ -13,6 +13,8 @@ export type BackupData = {
   categories: Category[]
   budgets?: Budget[]
   categoryBudgets?: CategoryBudget[]
+  goods?: Good[]
+  goodCategories?: GoodCategory[]
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -57,6 +59,24 @@ function validCategory(value: unknown): value is Category {
   )
 }
 
+function validGoodCategory(value: unknown): value is GoodCategory {
+ return isObject(value) && isString(value.id,100) && value.id.length>0 &&
+ isString(value.name,60) && value.name.trim().length>0 &&
+ (value.parentId===null || (isString(value.parentId,100) && value.parentId.length>0)) &&
+ typeof value.sortOrder==='number' && Number.isSafeInteger(value.sortOrder) && value.sortOrder>=0
+}
+function validGood(value: unknown): value is Good {
+ return isObject(value) && isString(value.id,100) && value.id.length>0 &&
+ isString(value.name,160) && value.name.trim().length>0 &&
+ isString(value.categoryId,100) && value.categoryId.length>0 &&
+ isString(value.brand,300) && isIsoDate(value.date) &&
+ (value.priceMinor===null || (typeof value.priceMinor==='number' && Number.isSafeInteger(value.priceMinor) && value.priceMinor>=0 && value.priceMinor<=99_999_999_999)) &&
+ isString(value.highlights,100_000) && isString(value.review,100_000) &&
+ (value.rating==='recommend'||value.rating==='normal'||value.rating==='avoid') &&
+ isString(value.image,1_500_000) &&
+ (value.image==='' || value.image.startsWith('data:image/jpeg;base64,')) &&
+ isTimestamp(value.createdAt) && isTimestamp(value.updatedAt)
+}
 export function validateBackupText(text: string): BackupData {
   if (text.length > MAX_BACKUP_CHARS) throw new Error('备份文件过大，已拒绝导入')
   let data: unknown
@@ -97,12 +117,30 @@ export function validateBackupText(text: string): BackupData {
     throw new Error('备份存在缺失或类型错误的分类')
   }
   if ((categoryBudgets as CategoryBudget[]).some(b => !categories.some(c => c.id === b.categoryId && c.type === 'expense'))) throw new Error('分类预算引用了无效的支出分类')
-  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: data.exportedAt, entries, categories, budgets: budgets as Budget[], categoryBudgets: categoryBudgets as CategoryBudget[] }
+  const goodCategories = data.goodCategories
+  const goods = data.goods
+  // Legacy backups don't have either field; keep the existing goods collection on legacy restore.
+  if ((goods === undefined) !== (goodCategories === undefined)) throw new Error('好物备份缺少分类或商品数据')
+  if (goods !== undefined) {
+    if (!Array.isArray(goods) || !Array.isArray(goodCategories) ||
+      goods.length>10_000 || goodCategories.length>5_000 ||
+      !goods.every(validGood) || !goodCategories.every(validGoodCategory)) throw new Error('好物备份格式无效')
+    const ids=new Set((goodCategories as GoodCategory[]).map(c=>c.id))
+    if(ids.size!==goodCategories.length || new Set((goods as Good[]).map(g=>g.id)).size!==goods.length) throw new Error('好物备份包含重复 ID')
+    if((goodCategories as GoodCategory[]).some(c=>c.parentId!==null&&!ids.has(c.parentId!)) ||
+      (goods as Good[]).some(g=>!ids.has(g.categoryId))) throw new Error('好物备份引用了不存在的分类')
+    const parents=new Map((goodCategories as GoodCategory[]).map(c=>[c.id,c.parentId]))
+    for (const c of goodCategories as GoodCategory[]) {
+      const visited=new Set<string>();let id:string|null=c.id
+      while(id!==null){if(visited.has(id))throw new Error('好物分类存在循环层级');visited.add(id);id=parents.get(id)??null}
+    }
+  }
+  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: data.exportedAt, entries, categories, budgets: budgets as Budget[], categoryBudgets: categoryBudgets as CategoryBudget[], ...(goods===undefined?{}:{goods:goods as Good[],goodCategories:goodCategories as GoodCategory[]}) }
 }
 
 export async function createBackup(): Promise<BackupData> {
-  const [entries, categories, budgets, categoryBudgets] = await Promise.all([db.entries.toArray(), db.categories.toArray(), db.budgets.toArray(), db.categoryBudgets.toArray()])
-  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), entries, categories, budgets, categoryBudgets }
+  const [entries, categories, budgets, categoryBudgets, goods, goodCategories] = await Promise.all([db.entries.toArray(), db.categories.toArray(), db.budgets.toArray(), db.categoryBudgets.toArray(), db.goods.toArray(), db.goodCategories.toArray()])
+  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), entries, categories, budgets, categoryBudgets, goods, goodCategories }
 }
 
 function download(name: string, text: string, mime: string) {
@@ -147,7 +185,7 @@ export async function downloadCsv() {
 export async function restoreBackup(backup: BackupData): Promise<void> {
   // 再次校验，以防传入的对象在预览后被修改。
   const safe = validateBackupText(JSON.stringify(backup))
-  await db.transaction('rw', db.entries, db.categories, db.budgets, db.categoryBudgets, async () => {
+  await db.transaction('rw', [db.entries, db.categories, db.budgets, db.categoryBudgets, db.goods, db.goodCategories], async () => {
     await db.entries.clear()
     await db.categories.clear()
     await db.budgets.clear()
@@ -156,5 +194,11 @@ export async function restoreBackup(backup: BackupData): Promise<void> {
     if (safe.budgets?.length) await db.budgets.bulkAdd(safe.budgets)
     if (safe.categoryBudgets?.length) await db.categoryBudgets.bulkAdd(safe.categoryBudgets)
     await db.entries.bulkAdd(safe.entries)
+    if(safe.goods && safe.goodCategories){
+      await db.goods.clear()
+      await db.goodCategories.clear()
+      if(safe.goodCategories.length)await db.goodCategories.bulkAdd(safe.goodCategories)
+      if(safe.goods.length)await db.goods.bulkAdd(safe.goods)
+    }
   })
 }
