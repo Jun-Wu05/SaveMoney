@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, MoreHorizontal, GripVertical, Download, FileSpreadsheet, Archive } from 'lucide-react'
-import { db, type Good, type GoodCategory } from './db'
+import { db, type Good, type GoodCategory, type GoodPurchase } from './db'
 import { DateWheelPicker } from './DateWheelPicker'
 import { installGoodsPwaZoomRecovery } from './goodsPwaZoom'
 import { exportGoodsExcel, exportGoodsZip } from './goodsExport'
@@ -106,8 +106,10 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  useEffect(()=>{const screen=screenRef.current;return screen?installGoodsPwaZoomRecovery(screen):undefined},[])
  const categories=useLiveQuery(()=>db.goodCategories.toArray(),[],[])
  const goods=useLiveQuery(()=>db.goods.toArray(),[],[])
+ const groups=useLiveQuery(()=>db.consumptionGroups.toArray(),[],[])
+ const purchases=useLiveQuery(()=>db.goodPurchases.toArray(),[],[])
  const [stack,setStack]=useState<string[]>([])
- const [mode,setMode]=useState<'browse'|'edit'|'detail'|'manage'|'choose'|'export'>('browse')
+ const [mode,setMode]=useState<'browse'|'edit'|'detail'|'manage'|'choose'|'export'|'consumption'>('browse')
  const [draft,setDraft]=useState<Good|null>(null)
  const [detail,setDetail]=useState<string|null>(null)
  const [query,setQuery]=useState('')
@@ -118,6 +120,12 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const [error,setError]=useState('')
  const [exportBusy,setExportBusy]=useState(false)
  const [exportStatus,setExportStatus]=useState('')
+ const [purchaseOpen,setPurchaseOpen]=useState(false)
+ const [purchaseDate,setPurchaseDate]=useState(dateNow())
+ const [purchasePrice,setPurchasePrice]=useState('')
+ const [purchaseQuantity,setPurchaseQuantity]=useState('1')
+ const [purchaseNote,setPurchaseNote]=useState('')
+ const [groupName,setGroupName]=useState('')
  const [dateOpen,setDateOpen]=useState(false)
  const [managePath,setManagePath]=useState<string[]>([])
  const [choosePath,setChoosePath]=useState<string[]>([])
@@ -151,6 +159,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  },[all,cats,query,filter,active,searchField])
  const goBack=()=>{
   setError('')
+  if(mode==='consumption'){setMode('browse');return}
   if(mode==='export'){setMode('browse');setExportStatus('');return}
   if(mode==='choose'){if(choosePath.length){setChoosePath(old=>old.slice(0,-1));return}setMode('edit');return}
   if(mode==='manage'){
@@ -165,7 +174,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const edit=(item?:Good)=>{setDraft(item?{...item}:emptyGood());setDetail(item?.id??null);setMode('edit');setError('')}
  const openDetail=(id:string)=>{setDetail(id);setMode('detail');setError('')}
  const save=async()=>{if(!draft)return; if(!draft.name.trim()){setError('请填写商品名称');return} if(!draft.categoryId||!cats.some(c=>c.id===draft.categoryId)){setError('请选择分类');return}setSaving(true);setError('');try{await db.goods.put({...draft,name:draft.name.trim(),updatedAt:new Date().toISOString()});setDetail(draft.id);setMode('detail')}catch{setError('保存失败，请检查设备存储空间')}finally{setSaving(false)}}
- const erase=async()=>{if(!current||!confirm('确定删除这件好物？此操作无法撤销。'))return;await db.goods.delete(current.id);setDetail(null);setMode('browse')}
+ const erase=async()=>{if(!current||!confirm('确定删除这件好物及全部购买记录？此操作无法撤销。'))return;await db.transaction('rw',db.goods,db.goodPurchases,async()=>{await db.goodPurchases.where('goodId').equals(current.id).delete();await db.goods.delete(current.id)});setDetail(null);setMode('browse')}
  const manageParent=managePath.at(-1)??null
  const manageChildren=useMemo(()=>{
   const siblings=cats.filter(c=>c.parentId===manageParent)
@@ -277,9 +286,13 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
   }catch(e){setExportStatus(e instanceof Error?e.message:'导出失败，请检查设备剩余空间')}
   finally{setExportBusy(false)}
  }
- const headerTitle=mode==='export'?'导出我的好物':mode==='edit'?'添加 / 编辑好物':mode==='detail'?'好物详情':mode==='manage'?(manageParent?cats.find(c=>c.id===manageParent)?.name??'分类管理':'分类管理'):mode==='choose'?(chooseParent?cats.find(c=>c.id===chooseParent)?.name??'选择分类':'选择分类'):activeCategory?.name??'我的好物'
+ const currentPurchases=(purchases??[]).filter(p=>p.goodId===detail).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt))
+ const purchaseStats=(items:GoodPurchase[])=>{const dates=[...new Set(items.map(p=>p.date))].sort();const gaps=dates.slice(1).map((d,i)=>(Date.parse(d+'T00:00:00')-Date.parse(dates[i]+'T00:00:00'))/86400000);return {count:items.length,total:items.reduce((n,p)=>n+(p.priceMinor??0)*p.quantity,0),avg:gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):null}}
+ const recordPurchase=async()=>{if(!current)return;const quantity=Number(purchaseQuantity),price=purchasePrice.trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate)||!Number.isFinite(Date.parse(purchaseDate+'T00:00:00'))||!Number.isInteger(quantity)||quantity<1||quantity>9999|| (price!==''&&!/^\d{1,8}(\.\d{1,2})?$/.test(price))){setError('请检查日期、价格和数量');return}try{await db.goodPurchases.add({id:crypto.randomUUID(),goodId:current.id,date:purchaseDate,priceMinor:price===''?null:Math.round(Number(price)*100),quantity,note:purchaseNote.trim(),createdAt:new Date().toISOString()});setPurchaseOpen(false);setError('')}catch{setError('购买记录保存失败')}}
+ const headerTitle=mode==='consumption'?'消耗统计':mode==='export'?'导出我的好物':mode==='edit'?'添加 / 编辑好物':mode==='detail'?'好物详情':mode==='manage'?(manageParent?cats.find(c=>c.id===manageParent)?.name??'分类管理':'分类管理'):mode==='choose'?(chooseParent?cats.find(c=>c.id===chooseParent)?.name??'选择分类':'选择分类'):activeCategory?.name??'我的好物'
  return <div className="goods-screen" ref={screenRef}><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<div className="goods-header-actions"><button aria-label="导出好物" title="导出好物" onClick={()=>{setExportStatus('');setMode('export')}}><Download size={21}/></button><button aria-label="添加好物" title="添加好物" onClick={()=>edit()}><Plus size={23}/></button></div>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
  {error&&<p className="goods-error" role="alert">{error}</p>}
+ {mode==='consumption'&&<div className="goods-body"><h3>消耗组统计</h3>{(groups??[]).map(group=>{const members=all.filter(g=>g.consumptionGroupId===group.id);const items=(purchases??[]).filter(p=>members.some(g=>g.id===p.goodId));const stats=purchaseStats(items);return <section className="goods-note" key={group.id}><h3>{group.name} · {members.length} 件商品</h3><p>购买 {stats.count} 次 · 累计 ¥{(stats.total/100).toFixed(2)} · 平均间隔 {stats.avg===null?'数据不足':stats.avg+' 天'}</p><div className="goods-list">{items.sort((a,b)=>b.date.localeCompare(a.date)).map(p=><div className="goods-info-row" key={p.id}><span>{p.date} · {members.find(g=>g.id===p.goodId)?.name}</span><strong>{p.quantity} 件 · {moneyLabel(p.priceMinor)||'未填价格'}</strong></div>)}</div></section>})}{!(groups??[]).length&&<p className="goods-muted">还没有消耗组，请在编辑好物时创建。</p>}</div>}
  {mode==='export'&&<div className="goods-body goods-export-page">
    <p className="goods-export-hint">导出范围：全部 {all.length} 件好物、{cats.length} 个分类（包含空分类）。本模块独立导出，不包含账单。</p>
    <button type="button" className="goods-export-option" disabled={exportBusy} onClick={()=>void runGoodsExport('xlsx')}><span className="goods-export-option-icon"><FileSpreadsheet size={23}/></span><span><strong>导出 Excel 清单</strong><small>带商品照片的 .xlsx · 全部好物、分类目录、AI 分析说明</small></span><ChevronRight size={18}/></button>
@@ -300,15 +313,17 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
     {matched.length>0&&<section><div className="goods-section-head"><h3>相关好物</h3></div><div className="goods-products">{matched.map(item=><button key={item.id} className="goods-product" onClick={()=>openDetail(item.id)}>{item.image?<img src={item.image} alt=""/>:<span className="goods-no-photo"><ImagePlus size={19}/></span>}<span className="goods-product-desc"><strong>{item.name}</strong><small>{searchReason(item,cats,query,searchField)}</small><em>{moneyLabel(item.priceMinor)}</em></span><ChevronRight size={14}/></button>)}</div></section>}
     {!matched.length&&!searchCategories.length&&<div className="goods-empty"><strong>没有找到相关内容</strong><span>试试商品名称、分类、品牌、价格或商品要点</span></div>}
   </div> : <>
+  {!active&&<button className="goods-category-use" onClick={()=>setMode('consumption')}>消耗统计 · 查看重复购买周期 <ChevronRight size={17}/></button>}
   {!active&&<section className="goods-shortcuts">{[['all','全部好物',all.length],['recommend','推荐回购',all.filter(g=>g.rating==='recommend').length],['recent','最近添加',all.length]] .map(([key,label,count])=><button key={key} className={filter===key?'on':''} onClick={()=>setFilter(key as typeof filter)}><span>{label}</span><small>{count}</small></button>)}</section>}
   {children.length>0&&<><div className="goods-section-head"><h3>{active?'子分类':'我的分类'}</h3>{!active&&<button onClick={()=>{setManagePath([]);setActionCategory(null);setCategoryForm(false);setMode('manage')}}>管理</button>}</div><div className="goods-list">{children.map(c=><button className="goods-row" key={c.id} onClick={()=>{setStack(s=>[...s,c.id]);setQuery('');setFilter('all')}}><Folder size={19}/><span>{c.name}</span><small>{all.filter(g=>descendants(c.id,cats).has(g.categoryId)).length}</small><ChevronRight size={17}/></button>)}</div></>}
   {(active||query||filter!=='all')&&<div className="goods-section-head"><h3>全部商品（{matched.length}）</h3><span>按购买日期排序</span></div>}
   {matched.length>0&&<div className="goods-products">{matched.slice(0,active||query||filter!=='all'?undefined:5).map(item=><button key={item.id} className="goods-product" onClick={()=>openDetail(item.id)}>{item.image?<img src={item.image} alt=""/>:<span className="goods-no-photo"><ImagePlus size={19}/></span>}<span className="goods-product-desc"><strong>{item.name}</strong><small>{item.highlights.trim().split('\n')[0]?.slice(0,45)||pathFor(item.categoryId,cats)}</small><em>{moneyLabel(item.priceMinor)}</em></span>{item.rating==='recommend'&&<span className="goods-badge"><Star size={12} fill="currentColor"/>推荐</span>}<ChevronRight size={14}/></button>)}</div>}
   {!matched.length&&<div className="goods-empty">{all.length?'没有找到相关商品':'还没有好物，点击右上角 + 开始记录。'}</div>}  </>}
  </div>}
- {mode==='detail'&&current&&<div className="goods-body goods-detail">{current.image?<img className="goods-hero-img" src={current.image} alt={current.name}/>:<div className="goods-hero-placeholder"><ImagePlus/>暂无图片</div>}<div className="goods-detail-name"><h2>{current.name}</h2>{current.rating==='recommend'&&<span className="goods-badge">★ 推荐</span>}{current.rating==='avoid'&&<span className="goods-badge neutral">不推荐</span>}</div><div className="goods-price">{moneyLabel(current.priceMinor)}</div><div className="goods-list">{[['分类',pathFor(current.categoryId,cats)],['品牌 / 店铺',current.brand],['购买日期',current.date],['购买价格',moneyLabel(current.priceMinor)]].filter(([,v])=>Boolean(v)).map(([k,v])=><div className="goods-info-row" key={k}><span>{k}</span><strong>{v}</strong></div>)}</div>{current.highlights&&<section className="goods-note"><h3>商品要点</h3><p>{current.highlights}</p></section>}{current.review&&<section className="goods-note"><h3>使用评价</h3><p>{current.review}</p></section>}<button className="goods-delete" onClick={()=>void erase()}><Trash2 size={16}/> 删除好物</button></div>}
+ {mode==='detail'&&current&&<div className="goods-body goods-detail">{current.image?<img className="goods-hero-img" src={current.image} alt={current.name}/>:<div className="goods-hero-placeholder"><ImagePlus/>暂无图片</div>}<div className="goods-detail-name"><h2>{current.name}</h2>{current.rating==='recommend'&&<span className="goods-badge">★ 推荐</span>}{current.rating==='avoid'&&<span className="goods-badge neutral">不推荐</span>}</div><div className="goods-price">{moneyLabel(current.priceMinor)}</div><div className="goods-list">{[['分类',pathFor(current.categoryId,cats)],['品牌 / 店铺',current.brand],['购买日期',current.date],['购买价格',moneyLabel(current.priceMinor)]].filter(([,v])=>Boolean(v)).map(([k,v])=><div className="goods-info-row" key={k}><span>{k}</span><strong>{v}</strong></div>)}</div><section className="goods-note"><h3>购买记录 · {currentPurchases.length} 次</h3><p>累计 ¥{(purchaseStats(currentPurchases).total/100).toFixed(2)} · 平均购买间隔 {purchaseStats(currentPurchases).avg===null?'数据不足':purchaseStats(currentPurchases).avg+' 天'}</p><button className="goods-save" onClick={()=>{setPurchaseDate(dateNow());setPurchasePrice(current.priceMinor===null?'':String(current.priceMinor/100));setPurchaseQuantity('1');setPurchaseNote('');setPurchaseOpen(true)}}>+ 再次购买</button><div className="goods-list">{currentPurchases.map(p=><div className="goods-info-row" key={p.id}><span>{p.date} · {p.quantity} 件 {p.note&&'· '+p.note}</span><strong>{moneyLabel(p.priceMinor)||'未填价格'} <button aria-label="删除购买记录" onClick={async()=>{if(confirm('删除这条购买记录？'))await db.goodPurchases.delete(p.id)}}><Trash2 size={15}/></button></strong></div>)}</div></section>{current.highlights&&<section className="goods-note"><h3>商品要点</h3><p>{current.highlights}</p></section>}{current.review&&<section className="goods-note"><h3>使用评价</h3><p>{current.review}</p></section>}<button className="goods-delete" onClick={()=>void erase()}><Trash2 size={16}/> 删除好物</button></div>}
  {mode==='edit'&&draft&&<div className="goods-body goods-form"><label className="goods-photo-input">{draft.image?<img src={draft.image} alt="商品照片"/>:<><ImagePlus size={27}/><span>添加照片</span></>}<input type="file" accept="image/*" onChange={(e:ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(f)void loadPhoto(f).then(v=>setDraft(d=>d?{...d,image:v}:d)).catch(err=>setError(err.message));e.currentTarget.value=''}}/></label>{draft.image&&<button className="goods-remove-photo" onClick={()=>setDraft({...draft,image:''})}>移除照片</button>}
  <div className="goods-list goods-fields"><label>商品名称 <input placeholder="请输入商品名称" enterKeyHint="done" value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();e.currentTarget.blur()}}}/></label><button onClick={()=>{setChoosePath([]);setMode('choose')}}>分类 <strong>{pathFor(draft.categoryId,cats)||'请选择分类'}</strong><ChevronRight size={17}/></button><label>品牌 / 店铺<input placeholder="选填" value={draft.brand} onChange={e=>setDraft({...draft,brand:e.target.value})}/></label><button onClick={()=>setDateOpen(true)}>购买日期 <strong>{draft.date}</strong><ChevronRight size={17}/></button><label>购买价格<input inputMode="decimal" placeholder="选填（元）" value={draft.priceMinor===null?'':String(draft.priceMinor/100)} onChange={e=>{const value=e.target.value;if(value===''){setDraft({...draft,priceMinor:null});return}if(/^\d{0,8}(\.\d{0,2})?$/.test(value))setDraft({...draft,priceMinor:Math.round(Number(value)*100)})}}/></label></div>
+ <section className="goods-note"><h3>消耗组（选填，与商品分类独立）</h3><div className="goods-list goods-fields"><label>所属消耗组 <select value={draft.consumptionGroupId??''} onChange={e=>setDraft({...draft,consumptionGroupId:e.target.value||null})}><option value="">不加入消耗组</option>{(groups??[]).map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label></div><div className="goods-manage-create"><input placeholder="例如：抽纸、洗发水" value={groupName} onChange={e=>setGroupName(e.target.value)}/><button onClick={async()=>{const name=groupName.trim();if(!name)return;const existing=(groups??[]).find(g=>g.name===name);if(existing){setDraft({...draft,consumptionGroupId:existing.id});setGroupName('');return}const id=crypto.randomUUID();await db.consumptionGroups.add({id,name,createdAt:new Date().toISOString()});setDraft({...draft,consumptionGroupId:id});setGroupName('')}}>创建并选择</button></div></section>
  <label className="goods-textarea">商品要点 <textarea rows={5} placeholder={'记录材质、配比、规格等关键信息…\n例如：白鸭绒、绒子含量90%、充绒量180g'} value={draft.highlights} onChange={e=>setDraft({...draft,highlights:e.target.value})}/></label>
  <label className="goods-textarea">使用评价 <textarea rows={4} placeholder="记录实际使用感受、优缺点…" value={draft.review} onChange={e=>setDraft({...draft,review:e.target.value})}/></label><div className="goods-rating"><h3>推荐状态</h3><div>{([['recommend','☆ 推荐'],['normal','一般'],['avoid','不推荐']] as const).map(([v,label])=><button className={draft.rating===v?'selected':''} key={v} onClick={()=>setDraft({...draft,rating:v})}>{label}</button>)}</div></div><button className="goods-save" disabled={saving} onClick={()=>void save()}>{saving?'保存中…':'保存好物'}</button></div>}
  {mode==='choose'&&draft&&<div className="goods-body goods-choose-category">
@@ -346,6 +361,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
      <div className="goods-category-form-actions"><button onClick={()=>{setCategoryForm(false);setEditingCategory(null);setCategoryName('');setError('')}}>取消</button><button disabled={!categoryName.trim()} onClick={()=>void addCategory()}><Check size={17}/>{editingCategory?'保存名称':'创建分类'}</button></div>
    </div>}
  </div>}
+ {purchaseOpen&&current&&<div className="goods-purchase-overlay"><div className="goods-purchase-dialog"><h3>再次购买 · {current.name}</h3><label>购买日期<input type="date" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/></label><label>单价（元）<input inputMode="decimal" placeholder="选填" value={purchasePrice} onChange={e=>setPurchasePrice(e.target.value)}/></label><label>数量<input inputMode="numeric" value={purchaseQuantity} onChange={e=>setPurchaseQuantity(e.target.value)}/></label><label>备注<input value={purchaseNote} onChange={e=>setPurchaseNote(e.target.value)} placeholder="选填"/></label><div className="goods-category-form-actions"><button onClick={()=>setPurchaseOpen(false)}>取消</button><button onClick={()=>void recordPurchase()}>保存购买记录</button></div></div></div>}
  {dateOpen&&draft&&<DateWheelPicker value={draft.date} onCancel={()=>setDateOpen(false)} onConfirm={date=>{setDraft({...draft,date});setDateOpen(false)}}/>}
  </div>
 }

@@ -1,4 +1,4 @@
-import { db, type Good, type GoodCategory } from './db'
+import { db, type Good, type GoodCategory, type GoodPurchase, type ConsumptionGroup } from './db'
 import { safeSpreadsheetText } from './excelExport'
 
 /** Export only My Goods, never financial ledger records. */
@@ -24,6 +24,8 @@ export type GoodsArchive = {
  exportedAt: string
  goods: GoodArchiveRecord[]
  categories: GoodCategory[]
+ purchases: GoodPurchase[]
+ consumptionGroups: ConsumptionGroup[]
 }
 const textCell = (value: string, height?: number):ExcelCell => ({ value: safeSpreadsheetText(value), wrap:true, alignVertical:'center', ...(height?{height}: {}) })
 const numberCell = (value:number):ExcelCell => ({value, alignVertical:'center'})
@@ -47,7 +49,7 @@ export function goodsCategoryPath(id:string, categories:GoodCategory[]):string[]
 function sortedGoods(goods:Good[]):Good[] {
  return [...goods].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)||a.id.localeCompare(b.id))
 }
-export function buildGoodsExportSheets(goods:Good[],categories:GoodCategory[], exportedAt=new Date().toISOString()):GoodsSheet[] {
+export function buildGoodsExportSheets(goods:Good[],categories:GoodCategory[], exportedAt=new Date().toISOString(), purchases:GoodPurchase[]=[], groups:ConsumptionGroup[]=[]):GoodsSheet[] {
  const ordered=sortedGoods(goods)
  const maxDepth=Math.max(3, ...categories.map(c=>goodsCategoryPath(c.id,categories).length))
  const headers=['图片','商品名称',...Array.from({length:maxDepth},(_,i)=>'第'+(i+1)+'级分类'),'完整分类路径','品牌 / 店铺','购买日期','购买价格（元）','商品要点','使用评价','推荐状态','商品ID']
@@ -102,9 +104,15 @@ export function buildGoodsExportSheets(goods:Good[],categories:GoodCategory[], e
   ['输出格式','中文结论 + 数据表 + 可验证的图表；数据不足时明确说明。'],
   ['隐私说明','商品信息和照片来自个人本地记录，向第三方 AI 提交前请自行确认隐私。'],
  ] as [string,string][]
+ const purchaseSheet:ExcelCell[][]=[header(['购买记录ID','商品ID','商品名称','消耗组','购买日期','单价（元）','数量','合计（元）','备注'])]
+ for(const p of [...purchases].sort((a,b)=>b.date.localeCompare(a.date))){const g=goods.find(x=>x.id===p.goodId);purchaseSheet.push([textCell(p.id),textCell(p.goodId),textCell(g?.name??'已删除商品'),textCell(groups.find(x=>x.id===g?.consumptionGroupId)?.name??''),textCell(p.date),p.priceMinor===null?textCell(''):numberCell(p.priceMinor/100),numberCell(p.quantity),p.priceMinor===null?textCell(''):numberCell(p.priceMinor*p.quantity/100),textCell(p.note)])}
+ const groupSheet:ExcelCell[][]=[header(['消耗组ID','消耗组名称','商品数量','购买次数','累计花费（元）','平均购买间隔（天）'])]
+ for(const group of groups){const ids=new Set(goods.filter(g=>g.consumptionGroupId===group.id).map(g=>g.id));const items=purchases.filter(p=>ids.has(p.goodId));const dates=[...new Set(items.map(p=>p.date))].sort();const gaps=dates.slice(1).map((d,i)=>(Date.parse(d+'T00:00:00')-Date.parse(dates[i]+'T00:00:00'))/86400000);groupSheet.push([textCell(group.id),textCell(group.name),numberCell(ids.size),numberCell(items.length),numberCell(items.reduce((n,p)=>n+(p.priceMinor??0)*p.quantity,0)/100),gaps.length?numberCell(Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length)):textCell('数据不足')])}
  return [
   {sheet:'全部好物',data:detail,columns:imageColumns,stickyRowsCount:1,showGridLines:false,images},
   {sheet:'分类目录',data:directory,columns:[{width:25},{width:23},{width:12},{width:47},{width:15},{width:43},{width:43}],stickyRowsCount:1,showGridLines:false},
+  {sheet:'购买记录',data:purchaseSheet,columns:[{width:42},{width:42},{width:28},{width:22},{width:18},{width:18},{width:12},{width:18},{width:42}],stickyRowsCount:1,showGridLines:false},
+  {sheet:'消耗组统计',data:groupSheet,columns:[{width:42},{width:26},{width:15},{width:15},{width:20},{width:24}],stickyRowsCount:1,showGridLines:false},
   {sheet:'AI分析说明',data:[header(['项目','内容']),...aiInfo.map(([a,b])=>[textCell(a),textCell(b)])],columns:[{width:27},{width:110}],stickyRowsCount:1,showGridLines:false}
  ]
 }
@@ -117,19 +125,21 @@ export function goodsImageBlob(dataUrl:string):Blob {
  for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i)
  return new Blob([bytes],{type:'image/jpeg'})
 }
-export function buildGoodsArchive(goods:Good[],categories:GoodCategory[],exportedAt=new Date().toISOString()):GoodsArchive {
+export function buildGoodsArchive(goods:Good[],categories:GoodCategory[],exportedAt=new Date().toISOString(),purchases:GoodPurchase[]=[],groups:ConsumptionGroup[]=[]):GoodsArchive {
  return {
   format:GOODS_ARCHIVE_FORMAT,version:GOODS_ARCHIVE_VERSION,exportedAt,
   categories:categories.map(c=>({...c})),
+  purchases:purchases.map(p=>({...p})),
+  consumptionGroups:groups.map(g=>({...g})),
   goods:goods.map(({image,...rest})=>({...rest,imageFile:image?imagePath(rest.id):null}))
  }
 }
 async function readExportData() {
- return Promise.all([db.goods.toArray(),db.goodCategories.toArray()] as const)
+ return Promise.all([db.goods.toArray(),db.goodCategories.toArray(),db.goodPurchases.toArray(),db.consumptionGroups.toArray()] as const)
 }
-async function generateExcel(goods:Good[],cats:GoodCategory[]):Promise<Blob> {
+async function generateExcel(goods:Good[],cats:GoodCategory[],purchases:GoodPurchase[],groups:ConsumptionGroup[]):Promise<Blob> {
  const {default:writeExcelFile}=await import('write-excel-file/browser')
- const sheets=buildGoodsExportSheets(goods,cats)
+ const sheets=buildGoodsExportSheets(goods,cats,new Date().toISOString(),purchases,groups)
  return writeExcelFile(sheets).toBlob()
 }
 async function shareOrSave(file:File):Promise<void> {
@@ -144,19 +154,19 @@ async function shareOrSave(file:File):Promise<void> {
  window.setTimeout(()=>URL.revokeObjectURL(url),60_000)
 }
 export async function exportGoodsExcel():Promise<void> {
- const [goods,cats]=await readExportData()
- const blob=await generateExcel(goods,cats)
+ const [goods,cats,purchases,groups]=await readExportData()
+ const blob=await generateExcel(goods,cats,purchases,groups)
  await shareOrSave(new File([blob],`我的好物_${timestamp()}.xlsx`,{type:XLSX_MIME}))
 }
 export async function exportGoodsZip():Promise<void> {
- const [goods,cats]=await readExportData()
+ const [goods,cats,purchases,groups]=await readExportData()
  const total=goods.reduce((n,g)=>n+g.image.length*.75,0)
  if(total>IMAGE_LIMIT_BYTES)throw new Error('照片合计超过100MB，请分批减少照片后导出')
- const excel=await generateExcel(goods,cats)
+ const excel=await generateExcel(goods,cats,purchases,groups)
  const {zip,strToU8}=await import('fflate')
  const items:Record<string,Uint8Array>={}
  items['我的好物.xlsx']=new Uint8Array(await excel.arrayBuffer())
- items['backup.json']=strToU8(JSON.stringify(buildGoodsArchive(goods,cats),null,2))
+ items['backup.json']=strToU8(JSON.stringify(buildGoodsArchive(goods,cats,new Date().toISOString(),purchases,groups),null,2))
  for(const good of goods) if(good.image) items[imagePath(good.id)]=new Uint8Array(await goodsImageBlob(good.image).arrayBuffer())
  const zipped=await new Promise<Uint8Array>((resolve,reject)=>{
   zip(items,{level:1},(error,result)=>error?reject(error):resolve(result))
