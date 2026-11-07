@@ -74,7 +74,7 @@ function validGood(value: unknown): value is Good {
  isString(value.highlights,100_000) && isString(value.review,100_000) &&
  (value.rating==='recommend'||value.rating==='normal'||value.rating==='avoid') &&
  isString(value.image,1_500_000) &&
- (value.image==='' || /^data:image\\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value.image)) &&
+ (value.image==='' || value.image.startsWith('data:image/jpeg;base64,')) &&
  isTimestamp(value.createdAt) && isTimestamp(value.updatedAt)
 }
 export function validateBackupText(text: string): BackupData {
