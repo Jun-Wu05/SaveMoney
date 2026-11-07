@@ -33,9 +33,13 @@ export interface Good {
   review: string
   rating: 'recommend' | 'normal' | 'avoid'
   image: string
+  consumptionGroupId?: string | null
   createdAt: string
   updatedAt: string
 }
+
+export interface ConsumptionGroup { id: string; name: string; createdAt: string }
+export interface GoodPurchase { id: string; goodId: string; date: string; priceMinor: number | null; quantity: number; note: string; createdAt: string }
 
 export interface Budget { month: string; amountMinor: number }
 export interface CategoryBudget { id: string; month: string; categoryId: string; amountMinor: number }
@@ -47,6 +51,8 @@ class LedgerDb extends Dexie {
   categoryBudgets!: EntityTable<CategoryBudget, 'id'>
   goodCategories!: EntityTable<GoodCategory, 'id'>
   goods!: EntityTable<Good, 'id'>
+  consumptionGroups!: EntityTable<ConsumptionGroup, 'id'>
+  goodPurchases!: EntityTable<GoodPurchase, 'id'>
 
   constructor() {
     super('SaveMoneyLedger')
@@ -72,6 +78,22 @@ class LedgerDb extends Dexie {
       categoryBudgets: 'id, month, categoryId',
       goodCategories: 'id, parentId, sortOrder',
       goods: 'id, categoryId, date, rating',
+    })
+    this.version(5).stores({
+      entries: 'id, date, type, categoryId',
+      categories: 'id, type, sortOrder',
+      budgets: 'month',
+      categoryBudgets: 'id, month, categoryId',
+      goodCategories: 'id, parentId, sortOrder',
+      goods: 'id, categoryId, date, rating, consumptionGroupId',
+      consumptionGroups: 'id, name',
+      goodPurchases: 'id, goodId, date',
+    }).upgrade(async tx => {
+      const goods = await tx.table('goods').toArray() as Good[]
+      const purchases = tx.table('goodPurchases')
+      for (const good of goods) {
+        await purchases.add({id: 'initial-'+good.id, goodId:good.id, date:good.date, priceMinor:good.priceMinor, quantity:1, note:'首次购买（从原好物记录迁移）', createdAt:good.createdAt})
+      }
     })
   }
 }
