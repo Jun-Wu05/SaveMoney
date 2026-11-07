@@ -68,3 +68,11 @@
 .goods-field-popover button:active{background:#f5eae1}
 .goods-search input{font-size:16px}
 @media(max-width:370px){.goods-search-bar{gap:5px}.goods-search-field{min-width:83px;padding:5px 6px}.goods-search-field strong{font-size:11px}}
+
+/* Prevent iOS Safari's automatic viewport zoom on focused form controls.
+   Keep user pinch-zoom enabled: only raise the computed input font size. */
+.goods-screen input,
+.goods-screen textarea,
+.goods-screen select{font-size:16px!important}
+.goods-fields label input{font-size:16px!important;line-height:1.4}
+.goods-textarea textarea{font-size:16px!important;line-height:1.55}
