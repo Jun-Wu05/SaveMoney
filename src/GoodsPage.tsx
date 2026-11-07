@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, X, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, MoreHorizontal } from 'lucide-react'
 import { db, type Good, type GoodCategory } from './db'
 import { DateWheelPicker } from './DateWheelPicker'
 import './GoodsPage.css'
