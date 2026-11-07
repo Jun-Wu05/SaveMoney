@@ -28,6 +28,7 @@ import { LOTTERY_EXPENSE_ID, LOTTERY_INCOME_ID, ensureLotteryCategories, lottery
 import { checkPwaUpdate } from './pwaUpdateCheck'
 import { RangeStats } from './RangeStats'
 import { DateWheelPicker } from './DateWheelPicker'
+import { GoodsPage } from './GoodsPage'
 import { isoLocal, offsetDays, validRange, type DateRange } from './dateRangeStats'
 
 type Tab = 'home' | 'list' | 'stats' | 'settings'
@@ -130,6 +131,7 @@ function EntryRow({ entry, categories, onEdit, onDeleted }: { entry: Entry; cate
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('home')
+  const [goodsOpen, setGoodsOpen] = useState(false)
   const [settingsPage, setSettingsPage] = useState<'root'|'data'|'categories'|'preferences'|'help'|'privacy'|'about'>('root')
   const [defaultLedgerView, setDefaultLedgerView] = useState<'list'|'calendar'>(() => localStorage.getItem('savemoney-default-ledger-view') === 'list' ? 'list' : 'calendar')
   const [budgetOpen, setBudgetOpen] = useState(false)
@@ -258,6 +260,7 @@ export default function App() {
   const goToTab = (next: Tab) => {
     setLotteryOpen(false)
     setBudgetOpen(false)
+    setGoodsOpen(false)
     setTab(next)
     if (next === 'settings') setSettingsPage('root')
     if (next === 'list') { setLedgerView(defaultLedgerView); setLedgerFiltersOpen(false) }
@@ -375,11 +378,12 @@ export default function App() {
   }
 
   return <div className="app-shell">
-    <header className="app-header"><div className="brand">SaveMoney<span className="brand-dot">.</span></div><span className="brand-caption">花了多少，心里有数</span></header>
+    {!goodsOpen && <header className="app-header"><div className="brand">SaveMoney<span className="brand-dot">.</span></div><span className="brand-caption">花了多少，心里有数</span></header>}
     {updateReady && !editing && !backupBusy && !pendingBackup && <div className="app-update-banner" role="status"><span>发现新版本。请确认当前账单已保存后更新。</span><button onClick={() => window.dispatchEvent(new Event('savemoney-approve-update'))}>立即更新</button></div>}
     {initError && <p className="error">本地数据库初始化失败，请检查 Safari 存储权限。</p>}
     {toast && <div className="save-toast" role="status" aria-live="polite"><span aria-hidden="true">✓</span> {toast}</div>}
     <main className="content">
+      {goodsOpen ? <GoodsPage onClose={()=>{setGoodsOpen(false);window.scrollTo(0,0)}}/> : <>
       {!lotteryOpen && (budgetOpen || tab !== 'settings') && <div className="month-picker"><button aria-label="上个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, -1))}}><ChevronLeft size={20}/></button><strong>{monthLabel(month)}</strong><button aria-label="下个月" onClick={() => {setLedgerDate('');setMonth(adjustMonth(month, 1))}}><ChevronRight size={20}/></button></div>}
       {lotteryOpen && tab === 'home' && <LotteryPage entries={entries ?? []} categories={categoryList} month={month} onMonthChange={setMonth} budgetMinor={lotteryBudget?.amountMinor ?? null} inheritedBudgetFrom={lotteryBudget?.inherited ? lotteryBudget.sourceMonth : null} onBack={() => {setLotteryOpen(false);window.scrollTo(0,0)}} onQuickRecord={type => void quickLotteryRecord(type)} onEdit={openEditor}/>}
       {!lotteryOpen && !budgetOpen && tab === 'home' && <div key="motion-home" className="motion-page">
@@ -492,7 +496,7 @@ export default function App() {
       {wheelField && <DateWheelPicker key={wheelField} value={draftRange[wheelField]} onCancel={()=>setWheelField(null)} onConfirm={date=>{setDraftRange(previous=>({...previous,[wheelField]:date}));setWheelField(null)}}/>}
       {!budgetOpen && tab === 'settings' && <div key="motion-settings" className="motion-page">
         {settingsPage === 'root' ? <>
-          <div className="settings-v2-heading"><h2>设置</h2><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div>
+          <div className="settings-v2-heading"><h2>设置</h2><div className="goods-settings-actions"><button type="button" aria-label="我的好物" title="我的好物" onClick={()=>{setGoodsOpen(true);window.scrollTo(0,0)}}><span className="goods-settings-action-label">我的好物</span></button><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div></div>
           <section className="settings-v2-profile"><div className="settings-v2-brand"><div className="settings-v2-logo"><Wallet size={23}/></div><div><strong>SaveMoney</strong><span>简单记账，清楚生活</span></div><small>本地账本</small></div>
           <div className="settings-v2-stats"><div><strong>{(entries ?? []).length}</strong><span>累计账单</span></div><div><strong>{new Set((entries ?? []).map(e => e.date)).size} 天</strong><span>记账天数</span></div></div></section>
           <div className="settings-v2-group-title">账本管理</div>
@@ -649,12 +653,13 @@ export default function App() {
           {currentBudget && <button type="button" className="delete-button" disabled={budgetBusy} onClick={() => void clearBudget()}><Trash2 size={15}/> 取消本月预算</button>}
         </div>
       </section>}
+      </>}
     </main>
-    <nav className="bottom-nav" aria-label="主导航">
+    {!goodsOpen && <nav className="bottom-nav" aria-label="主导航">
       {nav.slice(0,2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => goToTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
       <button className="add-button" aria-label="记一笔" onClick={() => openEditor('new')}><Plus size={25}/></button>
       {nav.slice(2).map(n => {const Icon = n.icon;return <button key={n.id} aria-current={tab === n.id ? 'page' : undefined} className={tab === n.id ? 'nav-item selected' : 'nav-item'} onClick={() => goToTab(n.id)}><Icon size={21}/><span>{n.text}</span></button>})}
-    </nav>
+    </nav>}
     {editing && <EntryEditor key={editing === 'new' ? (copyTemplate ? `copy-${copyTemplate.id}` : 'new') : editing.id} categories={categoryList} entries={entries ?? []} entry={editing === 'new' ? null : editing} template={copyTemplate} initialDate={newEntryDate} preset={lotteryPreset} onClose={closeEditor} onSaved={notifyChange} onQuickSaved={setToast} onDeleted={()=>notifyChange('账单已删除')} onDuplicate={duplicateEntry}/>}
   </div>
 }
