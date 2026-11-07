@@ -1,5 +1,6 @@
 import { describe,it,expect } from 'vitest'
 import {buildGoodsExportSheets,buildGoodsArchive,goodsCategoryPath,GOODS_ARCHIVE_FORMAT} from './goodsExport'
+import {unzipSync} from 'fflate'
 import type {Good,GoodCategory} from './db'
 const categories:GoodCategory[]=[
  {id:'clothes',name:'服装',parentId:null,sortOrder:0},
@@ -44,5 +45,18 @@ describe('我的好物 Excel 导出结构',()=>{
   expect(sheets[0].images?.[0].width).toBe(64)
   expect(sheets[0].images?.[0].height).toBe(64)
   expect(buildGoodsArchive([tiny],categories).goods[0].imageFile).toBe('images/good1.jpg')
+ })
+})
+
+describe('生成 Excel 的真实图片嵌入',()=>{
+ it('writes an XLSX with a sheet drawing and embedded JPEG media file',async()=>{
+  const image={...example,image:'data:image/jpeg;base64,/9j/2Q=='}
+  const {default:writeExcelFile}=await import('write-excel-file/node')
+  const buffer=await writeExcelFile(buildGoodsExportSheets([image],categories)).toBuffer()
+  const archive=unzipSync(new Uint8Array(buffer))
+  const paths=Object.keys(archive)
+  expect(paths.some(path=>path.startsWith('xl/media/'))).toBe(true)
+  expect(paths.some(path=>path.startsWith('xl/drawings/drawing'))).toBe(true)
+  expect(paths.some(path=>path==='xl/workbook.xml')).toBe(true)
  })
 })
