@@ -99,3 +99,6 @@
 .goods-purchase-dialog label{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--goods-line);font-size:14px}
 .goods-purchase-dialog input,.goods-form select{min-width:0;width:58%;font-size:16px!important;padding:9px;border:1px solid var(--goods-line);border-radius:9px;background:white;color:var(--goods-ink)}
 .goods-purchase-dialog .goods-category-form-actions button:last-child{background:var(--goods-accent);color:#fff}
+
+/* Separate consumption shortcut from the search controls on narrow iPhone PWA screens. */
+.goods-search-bar + .goods-category-use{margin-top:14px;margin-bottom:18px;flex-shrink:0}
