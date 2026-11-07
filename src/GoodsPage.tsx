@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, MoreHorizontal, GripVertical } from 'lucide-react'
 import { db, type Good, type GoodCategory } from './db'
 import { DateWheelPicker } from './DateWheelPicker'
 import './GoodsPage.css'
@@ -64,6 +64,9 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const [categoryName,setCategoryName]=useState('')
  const [editingCategory,setEditingCategory]=useState<string|null>(null)
  const [actionCategory,setActionCategory]=useState<string|null>(null)
+ const [dragOrder,setDragOrder]=useState<string[]|null>(null)
+ const dragRef=useRef<{id:string;pointerId:number}|null>(null)
+ const dragSaving=useRef(false)
  useEffect(()=>{ensureGoodsCategories().catch(()=>setError('分类初始化失败，请检查本地存储空间'))},[])
  const cats=useMemo(()=>(categories??[]).sort((a,b)=>a.sortOrder-b.sortOrder),[categories])
  const all=goods??[]
@@ -95,7 +98,11 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const save=async()=>{if(!draft)return; if(!draft.name.trim()){setError('请填写商品名称');return} if(!draft.categoryId||!cats.some(c=>c.id===draft.categoryId)){setError('请选择分类');return}setSaving(true);setError('');try{await db.goods.put({...draft,name:draft.name.trim(),updatedAt:new Date().toISOString()});setDetail(draft.id);setMode('detail')}catch{setError('保存失败，请检查设备存储空间')}finally{setSaving(false)}}
  const erase=async()=>{if(!current||!confirm('确定删除这件好物？此操作无法撤销。'))return;await db.goods.delete(current.id);setDetail(null);setMode('browse')}
  const manageParent=managePath.at(-1)??null
- const manageChildren=cats.filter(c=>c.parentId===manageParent)
+ const manageChildren=useMemo(()=>{
+  const siblings=cats.filter(c=>c.parentId===manageParent)
+  return dragOrder?[...siblings].sort((a,b)=>dragOrder.indexOf(a.id)-dragOrder.indexOf(b.id)):siblings
+ },[cats,manageParent,dragOrder])
+ useEffect(()=>setDragOrder(null),[manageParent])
  const openCategoryForm=(category?:GoodCategory)=>{
    setEditingCategory(category?.id??null);setCategoryName(category?.name??'');setCategoryForm(true);setActionCategory(null);setError('')
  }
@@ -122,16 +129,72 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
   try{await db.goodCategories.bulkDelete([...ids]);setActionCategory(null);setError('')}
   catch{setError('删除分类失败，请重试')}
  }
- const moveBy=async(id:string,delta:number)=>{
-  const c=cats.find(x=>x.id===id);if(!c)return
-  const siblings=cats.filter(x=>x.parentId===c.parentId)
-  const index=siblings.findIndex(x=>x.id===id)
-  const other=siblings[index+delta];if(!other)return
-  await db.transaction('rw',db.goodCategories,async()=>{
-   await db.goodCategories.update(id,{sortOrder:other.sortOrder})
-   await db.goodCategories.update(other.id,{sortOrder:c.sortOrder})
-  })
-  setActionCategory(null)
+ const saveOrder=(ids:string[])=>{
+  dragSaving.current=true
+  setDragOrder(ids)
+  void db.transaction('rw',db.goodCategories,async()=>{
+   for(let i=0;i<ids.length;i++)await db.goodCategories.update(ids[i],{sortOrder:i})
+  }).catch(()=>setError('排序保存失败，请重试')).finally(()=>{dragSaving.current=false;setDragOrder(null)})
+ }
+ const dragCategory=(event:ReactPointerEvent<HTMLButtonElement>,id:string)=>{
+  if(dragRef.current||dragSaving.current||categoryForm)return
+  if(event.pointerType==='mouse'&&event.button!==0)return
+  const row=event.currentTarget.closest<HTMLElement>('[data-goods-sort-id]')
+  const list=row?.parentElement
+  if(!row||!list)return
+  const rows=Array.from(list.querySelectorAll<HTMLElement>('[data-goods-sort-id]'))
+  const ids=rows.map(el=>el.dataset.goodsSortId??'')
+  const startIndex=ids.indexOf(id);if(startIndex<0||rows.length<2)return
+  event.preventDefault()
+  const pointerId=event.pointerId,startY=event.clientY
+  const rowHeight=row.getBoundingClientRect().height
+  let currentY=startY,target=startIndex,moved=false,raf=0
+  dragRef.current={id,pointerId};setActionCategory(null)
+  row.style.position='relative';row.style.zIndex='3';row.style.background='#fff6ee';row.style.boxShadow='0 6px 18px #31251b25'
+  const tick=()=>{
+   if(!dragRef.current||dragRef.current.pointerId!==pointerId)return
+   const delta=currentY-startY,direction=Math.sign(delta)
+   target=Math.max(0,Math.min(rows.length-1,startIndex+Math.round(delta/rowHeight)))
+   row.style.transform=`translate3d(0,${delta}px,0)`
+   rows.forEach((el,i)=>{
+    if(i===startIndex)return
+    const steps=(i-startIndex)*direction
+    const shift=steps>0?-direction*Math.max(0,Math.min(rowHeight,Math.abs(delta)-(steps-1)*rowHeight)):0
+    el.style.transform=shift?`translate3d(0,${shift}px,0)`:''
+   })
+   if(currentY<65)window.scrollBy(0,-Math.min(9,(65-currentY)/7))
+   else if(currentY>window.innerHeight-65)window.scrollBy(0,Math.min(9,(currentY-window.innerHeight+65)/7))
+   raf=requestAnimationFrame(tick)
+  }
+  raf=requestAnimationFrame(tick)
+  const cleanup=()=>{
+   window.removeEventListener('pointermove',move)
+   window.removeEventListener('pointerup',up)
+   window.removeEventListener('pointercancel',cancel)
+   cancelAnimationFrame(raf)
+   rows.forEach(el=>{el.style.transform=''})
+   row.style.position='';row.style.zIndex='';row.style.background='';row.style.boxShadow=''
+   dragRef.current=null
+  }
+  const finish=(cancelled:boolean)=>{
+   if(!dragRef.current||dragRef.current.pointerId!==pointerId)return
+   cleanup()
+   if(cancelled||!moved||target===startIndex)return
+   const reordered=[...ids];reordered.splice(startIndex,1);reordered.splice(target,0,id)
+   saveOrder(reordered)
+  }
+  const move=(e:PointerEvent)=>{if(e.pointerId!==pointerId)return;currentY=e.clientY;if(Math.abs(currentY-startY)>4)moved=true}
+  const up=(e:PointerEvent)=>{if(e.pointerId===pointerId)finish(false)}
+  const cancel=(e:PointerEvent)=>{if(e.pointerId===pointerId)finish(true)}
+  window.addEventListener('pointermove',move)
+  window.addEventListener('pointerup',up)
+  window.addEventListener('pointercancel',cancel)
+ }
+ const moveByKeyboard=(id:string,direction:number)=>{
+  if(dragSaving.current)return
+  const ids=manageChildren.map(c=>c.id),index=ids.indexOf(id),target=index+direction
+  if(index<0||target<0||target>=ids.length)return
+  ids.splice(index,1);ids.splice(target,0,id);saveOrder(ids)
  }
  const chooseParent=choosePath.at(-1)??null
  const chooseChildren=cats.filter(c=>c.parentId===chooseParent)
@@ -160,18 +223,17 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  {mode==='manage'&&<div className="goods-body goods-category-manager">
    {!categoryForm&&<>
      <p className="goods-category-location">{manageParent?<><button onClick={()=>{setManagePath([]);setActionCategory(null)}}>全部分类</button>{managePath.map((id,index)=><span key={id}><ChevronRight size={13}/><button onClick={()=>{setManagePath(managePath.slice(0,index+1));setActionCategory(null)}}>{cats.find(c=>c.id===id)?.name}</button></span>)}</>:'一级分类'}</p>
-     <p className="goods-muted">{manageParent?'这里展示当前分类的直接子分类。点击分类可继续管理下一层。':'点击分类可管理它的子分类。新建分类会直接放在当前层级。'}</p>
+     <p className="goods-muted">{manageParent?'这里展示当前分类的直接子分类。按住右侧手柄可拖动排序。':'点击分类管理子目录，按住右侧手柄上下拖动排序。'}</p>
      {manageChildren.length>0?<div className="goods-list">
-       {manageChildren.map((c,index)=>{
+       {manageChildren.map(c=>{
         const total=all.filter(g=>descendants(c.id,cats).has(g.categoryId)).length
         const subCount=cats.filter(x=>x.parentId===c.id).length
-        return <div className="goods-manage-item" key={c.id}>
+        return <div className="goods-manage-item" key={c.id} data-goods-sort-id={c.id}>
           <button className="goods-manage-open" onClick={()=>{setManagePath(old=>[...old,c.id]);setActionCategory(null);setError('')}}><Folder size={19}/><span><strong>{c.name}</strong><small>{subCount} 个子分类 · {total} 件商品</small></span><ChevronRight size={17}/></button>
           <button type="button" className="goods-manage-more" aria-label={`管理「${c.name}」`} aria-expanded={actionCategory===c.id} onClick={()=>{setActionCategory(actionCategory===c.id?null:c.id);setError('')}}><MoreHorizontal size={21}/></button>
+          <button type="button" className="goods-category-drag-handle" aria-label={`调整${c.name}顺序，按住拖动或使用上下方向键`} title="按住拖动排序" onPointerDown={e=>dragCategory(e,c.id)} onKeyDown={e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();moveByKeyboard(c.id,e.key==='ArrowUp'?-1:1)}}}><GripVertical size={21}/></button>
           {actionCategory===c.id&&<div className="goods-category-actions">
              <button onClick={()=>openCategoryForm(c)}><Pencil size={15}/>重命名</button>
-             <button disabled={index===0} onClick={()=>void moveBy(c.id,-1)}>↑ 上移</button>
-             <button disabled={index===manageChildren.length-1} onClick={()=>void moveBy(c.id,1)}>↓ 下移</button>
              <button className="goods-category-danger" onClick={()=>void deleteCategory(c.id)}><Trash2 size={15}/>删除</button>
           </div>}
         </div>

@@ -36,3 +36,10 @@
 .goods-choose-category .goods-list{margin:12px 0 16px}
 .goods-category-manager .goods-category-form-actions button:focus-visible,
 .goods-choose-category button:focus-visible{outline:2px solid var(--goods-accent);outline-offset:2px}
+
+/* Right-side drag handle mirrors the existing ledger category sorter. */
+.goods-category-drag-handle{flex:0 0 42px;display:grid;place-items:center;width:42px;height:52px;border:0;background:transparent;color:#897d72!important;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.goods-category-drag-handle:active{color:var(--goods-accent)!important}
+.goods-manage-item{will-change:transform}
+.goods-manage-item[data-drag-active="true"]{border-radius:10px}
+.goods-category-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
