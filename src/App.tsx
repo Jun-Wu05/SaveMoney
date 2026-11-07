@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BarChart3, CalendarDays, ChevronLeft, ChevronRight, Ellipsis, Home, List, Plus, Settings, Trash2, Wallet, CircleHelp, DatabaseBackup, ShieldCheck, SlidersHorizontal, Info, LayoutGrid } from 'lucide-react'
+import { BarChart3, CalendarDays, ChevronLeft, ChevronRight, Ellipsis, Home, List, Plus, Settings, Trash2, Wallet, CircleHelp, DatabaseBackup, ShieldCheck, SlidersHorizontal, Info, LayoutGrid, Package } from 'lucide-react'
 import { db, initializeCategories, removeEntry, type Category, type Entry, type TransactionType } from './db'
 import { money, sumMinor } from './money'
 import { budgetProgress, removeMonthlyBudget, setMonthlyBudget } from './budget'
@@ -496,7 +496,7 @@ export default function App() {
       {wheelField && <DateWheelPicker key={wheelField} value={draftRange[wheelField]} onCancel={()=>setWheelField(null)} onConfirm={date=>{setDraftRange(previous=>({...previous,[wheelField]:date}));setWheelField(null)}}/>}
       {!budgetOpen && tab === 'settings' && <div key="motion-settings" className="motion-page">
         {settingsPage === 'root' ? <>
-          <div className="settings-v2-heading"><h2>设置</h2><div className="goods-settings-actions"><button type="button" aria-label="我的好物" title="我的好物" onClick={()=>{setGoodsOpen(true);window.scrollTo(0,0)}}><span className="goods-settings-action-label">我的好物</span></button><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div></div>
+          <div className="settings-v2-heading"><h2>设置</h2><div className="goods-settings-actions"><button type="button" className="goods-settings-icon" aria-label="我的好物" title="我的好物" onClick={()=>{setGoodsOpen(true);window.scrollTo(0,0)}}><Package size={21} strokeWidth={1.9}/></button><button type="button" aria-label="帮助中心" onClick={() => openSettingsPage('help')}><CircleHelp size={23}/></button></div></div>
           <section className="settings-v2-profile"><div className="settings-v2-brand"><div className="settings-v2-logo"><Wallet size={23}/></div><div><strong>SaveMoney</strong><span>简单记账，清楚生活</span></div><small>本地账本</small></div>
           <div className="settings-v2-stats"><div><strong>{(entries ?? []).length}</strong><span>累计账单</span></div><div><strong>{new Set((entries ?? []).map(e => e.date)).size} 天</strong><span>记账天数</span></div></div></section>
           <div className="settings-v2-group-title">账本管理</div>
