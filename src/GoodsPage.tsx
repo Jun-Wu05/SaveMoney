@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft, ChevronRight, Folder, Plus, Search, Star, Pencil, Trash2, ImagePlus, Check, MoreHorizontal, GripVertical } from 'lucide-react'
 import { db, type Good, type GoodCategory } from './db'
 import { DateWheelPicker } from './DateWheelPicker'
+import { installGoodsPwaZoomRecovery } from './goodsPwaZoom'
 import './GoodsPage.css'
 
 const initial: Array<[string,string|null]> = [
@@ -100,6 +101,8 @@ async function loadPhoto(file:File):Promise<string> {
 }
 const moneyLabel=(v:number|null)=>v===null?'':('¥'+(v/100).toFixed(2).replace(/\.00$/,''))
 export function GoodsPage({onClose}:{onClose:()=>void}){
+ const screenRef=useRef<HTMLDivElement|null>(null)
+ useEffect(()=>{const screen=screenRef.current;return screen?installGoodsPwaZoomRecovery(screen):undefined},[])
  const categories=useLiveQuery(()=>db.goodCategories.toArray(),[],[])
  const goods=useLiveQuery(()=>db.goods.toArray(),[],[])
  const [stack,setStack]=useState<string[]>([])
@@ -261,7 +264,7 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
  const chooseParent=choosePath.at(-1)??null
  const chooseChildren=cats.filter(c=>c.parentId===chooseParent)
  const headerTitle=mode==='edit'?'添加 / 编辑好物':mode==='detail'?'好物详情':mode==='manage'?(manageParent?cats.find(c=>c.id===manageParent)?.name??'分类管理':'分类管理'):mode==='choose'?(chooseParent?cats.find(c=>c.id===chooseParent)?.name??'选择分类':'选择分类'):activeCategory?.name??'我的好物'
- return <div className="goods-screen"><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<button aria-label="添加好物" onClick={()=>edit()}><Plus size={23}/></button>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
+ return <div className="goods-screen" ref={screenRef}><header className="goods-header"><button aria-label="返回" onClick={goBack}><ArrowLeft size={21}/></button><strong>{headerTitle}</strong>{mode==='browse'?<button aria-label="添加好物" onClick={()=>edit()}><Plus size={23}/></button>:mode==='edit'?<button className="goods-accent-text" disabled={saving} onClick={()=>void save()}>保存</button>:mode==='detail'?<button className="goods-accent-text" onClick={()=>current&&edit(current)}>编辑</button>:mode==='manage'?<button className="goods-accent-text" aria-label="新增分类" onClick={()=>openCategoryForm()}><Plus size={22}/></button>:<span/>}</header>
  {error&&<p className="goods-error" role="alert">{error}</p>}
  {mode==='browse'&&<div className="goods-body">
   <div className="goods-search-bar">
