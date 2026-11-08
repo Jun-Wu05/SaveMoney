@@ -172,9 +172,9 @@ export function GoodsPage({onClose}:{onClose:()=>void}){
   if(stack.length){setStack(s=>s.slice(0,-1));setQuery('');setFilter('all');return}
   onClose()
  }
- const edit=(item?:Good)=>{setDraft(item?{...item}:emptyGood());setDetail(item?.id??null);setMode('edit');setError('')}
+ const edit=(item?:Good)=>{setDraft(item?{...item}:{...emptyGood(),categoryId:active??''});setDetail(item?.id??null);setMode('edit');setError('')}
  const openDetail=(id:string)=>{setDetail(id);setMode('detail');setError('')}
- const save=async()=>{if(!draft)return; if(!draft.name.trim()){setError('请填写商品名称');return} if(!draft.categoryId||!cats.some(c=>c.id===draft.categoryId)){setError('请选择分类');return}setSaving(true);setError('');try{await db.goods.put({...draft,name:draft.name.trim(),updatedAt:new Date().toISOString()});setDetail(draft.id);setMode('detail')}catch{setError('保存失败，请检查设备存储空间')}finally{setSaving(false)}}
+ const save=async()=>{if(!draft)return; if(!draft.name.trim()){setError('请填写商品名称');return} if(!draft.categoryId||!cats.some(c=>c.id===draft.categoryId)){setError('请选择分类');return}setSaving(true);setError('');try{await db.goods.put({...draft,name:draft.name.trim(),updatedAt:new Date().toISOString()});if(detail){setDetail(draft.id);setMode('detail')}else{setDetail(null);setMode('browse')}}catch{setError('保存失败，请检查设备存储空间')}finally{setSaving(false)}}
  const erase=async()=>{if(!current||!confirm('确定删除这件好物及全部购买记录？此操作无法撤销。'))return;await db.transaction('rw',db.goods,db.goodPurchases,async()=>{await db.goodPurchases.where('goodId').equals(current.id).delete();await db.goods.delete(current.id)});setDetail(null);setMode('browse')}
  const manageParent=managePath.at(-1)??null
  const manageChildren=useMemo(()=>{
