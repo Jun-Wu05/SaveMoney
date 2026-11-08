@@ -133,6 +133,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('home')
   const [goodsOpen, setGoodsOpen] = useState(false)
   const [settingsPage, setSettingsPage] = useState<'root'|'data'|'categories'|'preferences'|'help'|'privacy'|'about'>('root')
+  const [showLotteryLedger, setShowLotteryLedger] = useState(() => localStorage.getItem('savemoney-show-lottery-ledger') !== 'false')
   const [defaultLedgerView, setDefaultLedgerView] = useState<'list'|'calendar'>(() => localStorage.getItem('savemoney-default-ledger-view') === 'list' ? 'list' : 'calendar')
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [lotteryOpen, setLotteryOpen] = useState(false)
@@ -398,12 +399,12 @@ export default function App() {
           </> : <div className="budget-heading"><span>还没有设置本月预算</span><strong>设置预算 <ChevronRight size={15}/></strong></div>}
         </button>
 
-        <button type="button" className="lottery-home-link" onClick={() => void openLottery()} disabled={lotteryBusy}>
+        {showLotteryLedger && <button type="button" className="lottery-home-link" onClick={() => void openLottery()} disabled={lotteryBusy}>
           <span className="lottery-home-heading"><span className="lottery-home-icon">◈</span><strong>彩票账本</strong><ChevronRight size={19}/></span>
           <span className="lottery-home-description">单独管理购彩预算和中奖收支</span>
           <span className="lottery-home-metrics"><span>本月投入 <b>¥${money(lotterySummary.expenseMinor)}</b></span><span>净盈亏 <b>{lotterySummary.netMinor < 0 ? '−' : lotterySummary.netMinor > 0 ? '+' : ''}¥${money(Math.abs(lotterySummary.netMinor))}</b></span></span>
-        </button>
-        {lotteryError && <p className="error" role="alert">{lotteryError}</p>}
+        </button>}
+        {showLotteryLedger && lotteryError && <p className="error" role="alert">{lotteryError}</p>}
         <div className="section-heading home-section-heading"><h2>消费结构</h2><button onClick={() => goToTab('stats')}>查看分析 <ChevronRight size={15}/></button></div>
         {byCategory.length ? <>
           <div className="home-v2-top3" aria-label="消费最多的三个分类">{byCategory.slice(0,3).map((item,index)=><button key={item.id} type="button" onClick={()=>openCategoryBills([item.id])}><span className="home-v2-rank">{index+1}</span><span className="home-v2-category">{categoryName(categoryList,item.id)}</span><strong>¥{money(item.amount)}</strong><small>{expenses>0?Math.round(item.amount/expenses*100):0}%</small></button>)}</div>
@@ -506,6 +507,10 @@ export default function App() {
             <button onClick={() => openSettingsPage('preferences')}><SlidersHorizontal size={19}/><span><strong>记账偏好</strong><small>账单默认显示方式</small></span><ChevronRight size={17}/></button>
           </section>
           {backupReminder && <button type="button" className="backup-v2-reminder" onClick={() => openSettingsPage('data')}><ShieldCheck size={18}/><span><strong>{confirmedAgeDays === null ? '尚未确认已保存完整备份' : `距离上次确认保存备份已 ${confirmedAgeDays} 天`}</strong><small>建议每周导出 JSON 并保存到文件或 iCloud</small></span><ChevronRight size={16}/></button>}
+          <div className="settings-v2-group-title">首页显示</div>
+          <section className="settings-v2-menu">
+            <label className="settings-v2-toggle-row"><span className="settings-v2-toggle-icon" aria-hidden="true">◈</span><span className="settings-v2-toggle-copy"><strong>显示彩票账本</strong><small>控制首页是否展示彩票账本入口</small></span><input type="checkbox" role="switch" aria-label="显示彩票账本" checked={showLotteryLedger} onChange={event => {const enabled=event.target.checked;setShowLotteryLedger(enabled);localStorage.setItem('savemoney-show-lottery-ledger',String(enabled))}} /></label>
+          </section>
           <div className="settings-v2-group-title">应用</div>
           <section className="settings-v2-menu">
             <button onClick={() => openSettingsPage('privacy')}><ShieldCheck size={19}/><span><strong>隐私与数据安全</strong></span><ChevronRight size={17}/></button>
