@@ -1030,3 +1030,34 @@
   min-width: 0;
   max-width: 100%;
 }
+
+
+/* iOS PWA: every editable text/number/date/search field must compute to >=16px.
+   This includes monthly/category budgets and dynamically opened dialogs.
+   Never disable user pinch zoom via viewport meta settings. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+/* Preserve intentional large amount typography while preventing smaller overrides. */
+.budget-editor-form input,
+.category-budget-form input,
+.ledger-tools input,
+.goods-body input:not([type="file"]),
+.goods-body textarea,
+.goods-body select,
+.goods-search input,
+.settings-static-page input:not([type="file"]) {
+  font-size: 16px !important;
+}
+.settings-v2-toggle-row{display:flex;align-items:center;gap:12px;width:100%;min-height:66px;padding:12px 2px;color:#527d66}
+.settings-v2-toggle-icon{display:grid;place-items:center;flex:none;width:26px;height:26px;border-radius:9px;background:#e7eee7;color:#527d66;font-size:19px}
+.settings-v2-toggle-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:4px}
+.settings-v2-toggle-copy strong{font-size:13px;color:#28342c;font-weight:650}
+.settings-v2-toggle-copy small{font-size:11px;color:#929b93}
+.settings-v2-toggle-row input[type="checkbox"]{appearance:none;-webkit-appearance:none;flex:none;width:48px;height:29px;border-radius:20px;background:#d4d9d3;border:0;margin:0;position:relative;transition:background 160ms ease;cursor:pointer}
+.settings-v2-toggle-row input[type="checkbox"]:checked{background:#527d66}
+.settings-v2-toggle-row input[type="checkbox"]::before{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:white;box-shadow:0 1px 3px #0002;transition:transform 160ms ease}
+.settings-v2-toggle-row input[type="checkbox"]:checked::before{transform:translateX(19px)}
+.settings-v2-toggle-row input[type="checkbox"]:focus-visible{outline:3px solid #9db7a4;outline-offset:3px}
