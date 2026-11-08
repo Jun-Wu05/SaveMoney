@@ -1019,3 +1019,14 @@
 .date-wheel-caption{text-align:center;color:#88938b;font-size:11px;padding-top:8px}
 
 .goods-settings-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex:none}.settings-v2-heading .goods-settings-actions button{display:grid;place-items:center;flex:0 0 40px;width:40px;min-width:40px;max-width:40px;height:40px;padding:0;border:0;border-radius:50%;background:#fff;overflow:hidden}.settings-v2-heading .goods-settings-actions .goods-settings-icon{color:#b66d54;background:#f7ede7}.goods-settings-actions svg{display:block;flex:none}
+
+/* iPhone home-screen PWA: prevent WebKit focus auto-zoom in ledger category management.
+   Both the add-category and inline rename fields must compute to at least 16px.
+   Keep pinch-to-zoom enabled and preserve existing category drag/layout behavior. */
+.category-manager .manage-add input,
+.category-manager .manage-category input {
+  font-size: 16px !important;
+  line-height: 1.4;
+  min-width: 0;
+  max-width: 100%;
+}
