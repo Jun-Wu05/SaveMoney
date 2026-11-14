@@ -1061,3 +1061,7 @@ select {
 .settings-v2-toggle-row input[type="checkbox"]::before{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:white;box-shadow:0 1px 3px #0002;transition:transform 160ms ease}
 .settings-v2-toggle-row input[type="checkbox"]:checked::before{transform:translateX(19px)}
 .settings-v2-toggle-row input[type="checkbox"]:focus-visible{outline:3px solid #9db7a4;outline-offset:3px}
+
+/* Entry editor uses the same date wheel as Statistics, without native iOS calendar. */
+.form-fields .entry-date-trigger{width:100%;min-height:48px;border:1px solid #e5e9df;border-radius:11px;padding:12px;background:#fff;color:#202522;text-align:center;font-size:16px;font-weight:400}
+.form-fields .entry-date-trigger:focus-visible{outline:2px solid #527d66;outline-offset:2px}

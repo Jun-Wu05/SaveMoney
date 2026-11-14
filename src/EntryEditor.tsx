@@ -10,6 +10,7 @@ import { calculateAmount, finalizeAmount, type CalcOperator, type CalcPending } 
 import { preferredCategories, lastEntryOfType } from './quickEntry'
 import { icons, IconPicker } from './categoryIcons'
 import { CategoryManager } from './CategoryManager'
+import { DateWheelPicker } from './DateWheelPicker'
 
 const isValidLocalDate = (value: string) => {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -26,6 +27,7 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
   const [pendingCalc, setPendingCalc] = useState<CalcPending>(null)
   const [categoryId, setCategoryId] = useState(entry?.categoryId ?? template?.categoryId ?? preset?.categoryId ?? '')
   const [date, setDate] = useState(entry?.date ?? initialDate ?? localDay(new Date()))
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [note, setNote] = useState(entry?.note ?? template?.note ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -252,7 +254,7 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
         <h3 className="section-label">选择分类</h3>
         <div className="categories">{available.map(c => {const Icon = icons[c.icon] ?? Ellipsis;return <button type="button" key={c.id} onClick={() => setCategoryId(c.id)} className={selected === c.id ? 'category chosen' : 'category'}><Icon size={20}/><span>{c.name}</span></button>})}<button type="button" className="category category-add" onClick={() => {setCategoryView('new');setError('')}}><Plus size={20}/><span>新增分类</span></button></div>
         <button type="button" className="manage-category-link" onClick={() => {setCategoryView('manage');setError('')}}>管理分类 <ChevronRight size={16}/></button>
-        <div className="form-fields"><label>日期<input required type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label>备注（可选）<input maxLength={200} placeholder="写点什么…" value={note} onChange={e => setNote(e.target.value)} /></label></div>
+        <div className="form-fields"><label>日期<button type="button" className="entry-date-trigger" aria-label={`选择日期，当前${date}`} onClick={() => setDatePickerOpen(true)}>{`${date.slice(0,4)}年${Number(date.slice(5,7))}月${Number(date.slice(8,10))}日`}</button></label><label>备注（可选）<input maxLength={200} placeholder="写点什么…" value={note} onChange={e => setNote(e.target.value)} /></label></div>
         {error && <p className="error" role="alert">{error}</p>}
         {entry && <button className="copy-entry-button" type="button" disabled={busy} onClick={() => onDuplicate(entry)}>复制为新账单 <ChevronRight size={16}/></button>}
         {entry && <button className="delete-button" type="button" disabled={busy} onClick={remove}><Trash2 size={16}/> 删除这笔记录</button>}
@@ -265,6 +267,7 @@ export function EntryEditor({ categories, entries, entry, template, initialDate,
         </div>
       </footer>}
     </section>
+    {datePickerOpen && <DateWheelPicker value={date} onConfirm={next => { setDate(next); setDatePickerOpen(false); setError('') }} onCancel={() => setDatePickerOpen(false)} />}
   </div>, document.body)
 }
 
